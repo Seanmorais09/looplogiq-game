@@ -186,7 +186,7 @@
            `flex` (not inline-flex) + w-fit mx-auto so each is block-level and always forces
            its own line, instead of potentially sitting side-by-side on wider screens. -->
       <div class="flex w-fit mx-auto items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-2">
-        <span>🎉 AUTOMATION VICTORIOUS!</span>
+        <span>AUTOMATION VICTORIOUS!</span>
       </div>
 
       <!-- FINISH LINE FLAG: captures the player's business name (and logo, if a site was given) -->
@@ -260,7 +260,7 @@
           <div class="cf-turnstile w-full" data-sitekey="0x4AAAAAADQGnq0-h0Z6hdIJ" data-theme="dark" data-size="flexible"></div>
           <p id="leadFormStatus" class="text-xs text-center hidden" role="status" aria-live="polite"></p>
           <button type="submit" id="leadSubmitBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-950/60 transition transform hover:scale-[1.01] active:scale-95">
-            📞 Schedule My Free 20-Min Audit
+            Schedule My Free 20-Min Audit
           </button>
         </form>
       </div>
@@ -681,7 +681,7 @@
       if (encounteredUnique.length) {
         const box = document.createElement('div');
         box.className = 'p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30';
-        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-cyan-300 mb-2">🎯 Automations Your Business Can Benefit From</div>' +
+        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-cyan-300 mb-2">Automations Your Business Can Benefit From</div>' +
           '<ul class="text-xs text-slate-200 space-y-1">' +
           encounteredUnique.map(m => `<li>• ${m}</li>`).join('') + '</ul>';
         recap.appendChild(box);
@@ -758,7 +758,7 @@
           origin: { y: 0.5 }
         });
 
-        alert(`🎉 Thank you, ${name}! Your automation audit request for ${businessName} has been received. We will reach out to ${email} within 24 hours!\n\n🌐 Visit www.looplogiq.com for more info.`);
+        alert(`Thank you, ${name}! Your automation audit request for ${businessName} has been received. We will reach out to ${email} within 24 hours!\n\n🌐 Visit www.looplogiq.com for more info.`);
         form.reset();
         restartGame();
       } catch (err) {
@@ -768,7 +768,7 @@
         formStatus.classList.remove('hidden');
       } finally {
         submitBtn.disabled = false;
-        submitBtn.textContent = '📞 Schedule My Free 20-Min Audit';
+        submitBtn.textContent = 'Schedule My Free 20-Min Audit';
         if (window.turnstile) turnstile.reset();
       }
     }
