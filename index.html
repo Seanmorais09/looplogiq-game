@@ -63,6 +63,11 @@
       <span class="font-extrabold text-sm tracking-wider text-purple-200 uppercase hidden sm:inline">Hoop Hopper</span>
     </div>
 
+    <button onclick="togglePause()" type="button"
+            class="px-4 py-2 rounded-2xl glass-panel pointer-events-auto text-xs font-bold text-cyan-300 hover:text-cyan-200 hover:border-cyan-400/50 transition uppercase tracking-wide">
+      ⏸ Pause
+    </button>
+
     <!-- Lets a player wrap up early and jump straight to their results instead of
          waiting out the full timer. -->
     <button onclick="gameOver()" type="button"
@@ -123,6 +128,22 @@
     <div class="glass-panel rounded-2xl px-5 py-3 border-2 border-cyan-400/50 shadow-[0_0_25px_rgba(34,211,238,0.4)] text-center pointer-events-auto">
       <div class="text-cyan-300 font-extrabold text-sm uppercase tracking-wide">🐌 Not Using LoopLogiQ to Automate?</div>
       <div class="text-slate-300 text-xs mt-1">That's exactly what's slowing your business down. Start taking action!</div>
+    </div>
+  </div>
+
+  <!-- PAUSE OVERLAY -->
+  <div id="pauseOverlay" class="hidden absolute inset-0 z-40 flex items-center justify-center bg-black/70 backdrop-blur-sm">
+    <div class="glass-panel rounded-3xl p-8 max-w-xs w-full mx-4 text-center">
+      <div class="text-4xl mb-3">⏸</div>
+      <h2 class="text-2xl font-black text-white mb-6">Paused</h2>
+      <button onclick="togglePause()" type="button"
+              class="w-full py-3.5 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base shadow-xl shadow-purple-950/60 transition transform hover:scale-[1.02] active:scale-95 tracking-wide mb-3">
+        ▶ Resume
+      </button>
+      <button onclick="gameOver()" type="button"
+              class="w-full py-3 rounded-2xl border-2 border-red-400/40 text-red-300 hover:bg-red-500/10 hover:border-red-300 hover:text-red-200 transition font-bold text-sm tracking-wide">
+        🏁 End Run
+      </button>
     </div>
   </div>
 
@@ -297,6 +318,7 @@
 
     let businessName = "Acme Corp";
     let isPlaying = false;
+    let isPaused = false;
     let scoreHours = 0;
     let scoreDollars = 0;
     let frameCount = 0;
@@ -454,7 +476,7 @@
     }
 
     function jump() {
-      if (!isPlaying) return;
+      if (!isPlaying || isPaused) return;
       lastInputFrame = frameCount;
       document.getElementById('idleBanner').classList.add('hidden');
       player.vy = player.jumpPower;
@@ -491,6 +513,10 @@
       if (e.code === 'ArrowRight') {
         e.preventDefault();
         accelerating = true;
+      }
+      if (e.code === 'KeyP' || e.code === 'Escape') {
+        e.preventDefault();
+        togglePause();
       }
     });
     window.addEventListener('keyup', (e) => {
@@ -535,6 +561,8 @@
       if (e) e.preventDefault();
       const input = document.getElementById('businessInput').value.trim();
       businessName = input || "Acme Corp";
+      isPaused = false;
+      document.getElementById('pauseOverlay').classList.add('hidden');
 
       // Clearbit's free public logo API was discontinued, so this uses Google's favicon
       // service instead -- smaller than a full logo, but reliably resolves for real domains.
@@ -653,11 +681,24 @@
       }
     }
 
+    function togglePause() {
+      if (!isPlaying) return;
+      isPaused = !isPaused;
+      accelerating = false; // don't leave acceleration "stuck on" across a pause
+      document.getElementById('pauseOverlay').classList.toggle('hidden', !isPaused);
+      // No need to re-kick requestAnimationFrame here -- gameLoop() keeps re-scheduling
+      // itself every frame even while paused (it just skips all logic), so it picks up
+      // isPaused=false on its very next tick automatically.
+      if (!isPaused) lastInputFrame = frameCount; // don't count paused time toward the idle nudge
+    }
+
     function gameOver() {
       isPlaying = false;
+      isPaused = false;
       accelerating = false;
       document.getElementById('hud').classList.add('hidden');
       document.getElementById('accelerateBtn').classList.add('hidden');
+      document.getElementById('pauseOverlay').classList.add('hidden');
       document.getElementById('idleBanner').classList.add('hidden');
       document.getElementById('endTitle').innerText = `Awesome Job, ${businessName}!`;
       document.getElementById('endFlagBusinessName').innerText = businessName;
@@ -788,6 +829,10 @@
     // MAIN GAME LOOP
     function gameLoop() {
       if (!isPlaying) return;
+      if (isPaused) {
+        requestAnimationFrame(gameLoop);
+        return;
+      }
       frameCount++;
 
       // SESSION TIMER: keeps a run to ~45s so it's long enough to feel the mechanic but
