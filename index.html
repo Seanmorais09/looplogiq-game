@@ -2,89 +2,143 @@
 <html lang="en">
 <head>
 <meta charset="UTF-8">
-<meta name="viewport" content="width=device-width, initial-scale=1.0, maximum-scale=1.0, user-scalable=no">
+<meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LoopLogiQ: Business Automation Runner</title>
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
+<script src="https://challenges.cloudflare.com/turnstile/v0/api.js" async defer></script>
 <style>
-  * { box-sizing: border-box; user-select: none; -webkit-tap-highlight-color: transparent; }
-  body, html {
+  * { box-sizing: border-box; user-select: none; }
+  body {
     font-family: 'Outfit', sans-serif;
     background-color: #090511;
     color: #ffffff;
     margin: 0;
     padding: 0;
     overflow: hidden;
-    height: 100%;
-    width: 100%;
+    height: 100vh;
+    width: 100vw;
   }
   .glass-panel {
-    background: rgba(15, 12, 33, 0.88);
+    background: rgba(15, 12, 33, 0.85);
     backdrop-filter: blur(25px);
     -webkit-backdrop-filter: blur(25px);
-    border: 1px solid rgba(168, 85, 247, 0.4);
-    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.8);
+    border: 1px solid rgba(168, 85, 247, 0.35);
+    box-shadow: 0 25px 60px rgba(0, 0, 0, 0.7);
   }
-  .glow-text-purple { text-shadow: 0 0 20px rgba(168, 85, 247, 0.9); }
-  .glow-text-emerald { text-shadow: 0 0 20px rgba(52, 211, 153, 0.9); }
+  .glow-text-purple {
+    text-shadow: 0 0 20px rgba(168, 85, 247, 0.8);
+  }
+  .glow-text-emerald {
+    text-shadow: 0 0 20px rgba(52, 211, 153, 0.8);
+  }
   @keyframes pulseGlow {
     0%, 100% { box-shadow: 0 0 20px rgba(168, 85, 247, 0.4); border-color: rgba(168, 85, 247, 0.5); }
     50% { box-shadow: 0 0 50px rgba(168, 85, 247, 0.9); border-color: rgba(168, 85, 247, 0.9); }
   }
   .pulse-glow { animation: pulseGlow 2.5s infinite ease-in-out; }
-  canvas { display: block; position: absolute; inset: 0; width: 100%; height: 100%; z-index: 10; background: #090511; }
+  canvas { display: block; width: 100vw; height: 100vh; background: transparent; }
+  @keyframes avatarFloat {
+    0%, 100% { transform: translateY(0) rotate(0deg); }
+    50% { transform: translateY(-4px) rotate(-2deg); }
+  }
+  .avatar-alive { animation: avatarFloat 2.4s ease-in-out infinite; }
 </style>
 </head>
 <body class="relative flex items-center justify-center">
 
   <!-- BACKGROUND RADIAL GLOW -->
-  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-950/40 via-[#090511] to-[#040208] pointer-events-none z-0"></div>
+  <div class="absolute inset-0 bg-[radial-gradient(ellipse_at_center,_var(--tw-gradient-stops))] from-purple-900/30 via-[#090511] to-[#040208] pointer-events-none z-0"></div>
 
   <!-- GAME CANVAS -->
-  <canvas id="gameCanvas"></canvas>
+  <canvas id="gameCanvas" class="absolute inset-0 z-10"></canvas>
 
   <!-- TOP HUD BAR (VISIBLE DURING GAMEPLAY) -->
-  <div id="hud" class="hidden absolute top-4 inset-x-4 md:inset-x-8 z-30 flex items-center justify-between gap-4 pointer-events-none">
+  <div id="hud" class="hidden absolute top-4 inset-x-4 md:inset-x-8 z-30 flex flex-wrap items-center justify-between gap-4 pointer-events-none">
     <!-- LOGO BADGE -->
-    <div class="flex items-center gap-3 px-4 py-2 rounded-2xl glass-panel pointer-events-auto shadow-xl">
+    <div class="flex items-center gap-3 px-4 py-2 rounded-2xl glass-panel pointer-events-auto">
       <img src="public/logo.png" class="h-8 w-auto object-contain drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
-      <span class="font-extrabold text-xs tracking-wider text-purple-200 uppercase hidden sm:inline">Hoop Hopper</span>
+      <span class="font-extrabold text-sm tracking-wider text-purple-200 uppercase hidden sm:inline">Hoop Hopper</span>
     </div>
 
+    <!-- Lets a player wrap up early and jump straight to their results instead of
+         waiting out the full timer. -->
+    <button onclick="gameOver()" type="button"
+            class="px-4 py-2 rounded-2xl glass-panel pointer-events-auto text-xs font-bold text-red-300 hover:text-red-200 hover:border-red-400/50 transition uppercase tracking-wide">
+      🏁 End Run
+    </button>
+
     <!-- BUSINESS & METRICS DASHBOARD -->
-    <div class="flex items-center gap-3 sm:gap-6 px-5 py-2 rounded-2xl glass-panel pointer-events-auto shadow-xl">
+    <div class="flex items-center gap-3 sm:gap-6 px-5 py-2.5 rounded-2xl glass-panel pointer-events-auto">
       <div class="text-left">
-        <div class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Business</div>
-        <div id="hudBusinessName" class="font-bold text-xs sm:text-sm text-purple-300 truncate max-w-[100px] sm:max-w-[160px]">Acme Corp</div>
+        <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Business</div>
+        <div id="hudBusinessName" class="font-bold text-sm text-purple-300 truncate max-w-[120px] sm:max-w-[180px]">Acme Corp</div>
       </div>
-      <div class="h-7 w-px bg-purple-500/30"></div>
+      <div class="h-8 w-px bg-purple-500/30"></div>
       <div class="text-left">
-        <div class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Hours Saved</div>
-        <div id="hudHours" class="font-extrabold text-sm sm:text-base text-emerald-400 glow-text-emerald">0 hrs</div>
+        <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Hours Saved</div>
+        <div id="hudHours" class="font-extrabold text-base text-emerald-400 glow-text-emerald">0 hrs</div>
       </div>
-      <div class="h-7 w-px bg-purple-500/30"></div>
+      <div class="h-8 w-px bg-purple-500/30"></div>
       <div class="text-left">
-        <div class="text-[9px] uppercase font-bold text-slate-400 tracking-wider">Cost Saved</div>
-        <div id="hudDollars" class="font-extrabold text-sm sm:text-base text-purple-300 glow-text-purple">$0</div>
+        <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Dollars Saved</div>
+        <div id="hudDollars" class="font-extrabold text-base text-purple-300 glow-text-purple">$0</div>
       </div>
+      <div class="h-8 w-px bg-purple-500/30"></div>
+      <div class="text-left">
+        <div class="text-[10px] uppercase font-bold text-slate-400 tracking-wider">Time</div>
+        <div id="hudTimer" class="font-extrabold text-base text-cyan-300">0:45</div>
+      </div>
+    </div>
+  </div>
+
+  <!-- ACCELERATE: hold to speed up, mirrors holding the right arrow key on desktop.
+       Bottom-right for easy thumb reach on mobile, same visibility lifecycle as #hud. -->
+  <button id="accelerateBtn" type="button"
+          class="hidden absolute bottom-8 right-6 z-30 w-20 h-20 rounded-full glass-panel border-2 border-cyan-400/50
+                 flex flex-col items-center justify-center text-cyan-300 font-extrabold text-xs uppercase tracking-wide
+                 active:scale-95 active:border-cyan-300 active:text-cyan-200 transition select-none touch-none">
+    ⚡<span class="mt-0.5">Go</span>
+  </button>
+
+  <!-- SLOWDOWN BANNER: shown after hitting a manual-task obstacle. The business doesn't die, it just
+       slows down, and repeatedly tapping "forward" (same as the jump control) is what powers through
+       the manual work and gets back up to speed -- mirrors how doing things by hand slows a business down. -->
+  <div id="slowdownBanner" class="hidden absolute top-24 inset-x-4 z-30 flex justify-center pointer-events-none">
+    <div class="glass-panel rounded-2xl px-5 py-3 border-2 border-red-400/60 shadow-[0_0_25px_rgba(239,68,68,0.5)] text-center pointer-events-auto">
+      <div class="text-red-300 font-extrabold text-sm uppercase tracking-wide mb-1">⚠️ Manual Task Slowing You Down!</div>
+      <div class="text-slate-300 text-xs mb-2">Tap <span class="font-bold text-white">Space / Screen</span> to automate your way back up to speed</div>
+      <div class="h-2 w-48 mx-auto rounded-full bg-white/10 overflow-hidden">
+        <div id="slowdownProgress" class="h-full bg-gradient-to-r from-red-400 to-emerald-400 transition-all duration-150" style="width: 0%"></div>
+      </div>
+    </div>
+  </div>
+
+  <!-- IDLE NUDGE: shown if the player just lets the character stand there and does nothing.
+       Reinforces the same lesson as the slowdown mechanic -- not automating at all is its
+       own kind of manual, do-nothing slowdown. -->
+  <div id="idleBanner" class="hidden absolute top-24 inset-x-4 z-30 flex justify-center pointer-events-none">
+    <div class="glass-panel rounded-2xl px-5 py-3 border-2 border-cyan-400/50 shadow-[0_0_25px_rgba(34,211,238,0.4)] text-center pointer-events-auto">
+      <div class="text-cyan-300 font-extrabold text-sm uppercase tracking-wide">🐌 Not Using LoopLogiQ to Automate?</div>
+      <div class="text-slate-300 text-xs mt-1">That's exactly what's slowing your business down. Start taking action!</div>
     </div>
   </div>
 
   <!-- START GAME / BUSINESS INPUT MODAL -->
   <div id="startModal" class="absolute inset-0 z-40 flex items-center justify-center p-4">
-    <div class="glass-panel pulse-glow rounded-3xl p-6 sm:p-8 max-w-lg w-full text-center relative overflow-hidden">
+    <div class="glass-panel pulse-glow rounded-3xl p-8 max-w-lg w-full text-center relative overflow-hidden">
       <!-- OWNER AVATAR & LOGO -->
-      <div class="flex items-center justify-center gap-4 mb-5">
-        <img src="public/avatar.jpg" class="h-20 w-20 rounded-2xl object-cover border-2 border-purple-400/80 shadow-[0_0_30px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Owner Avatar">
+      <div class="flex items-center justify-center gap-4 mb-6">
+        <img src="public/avatar.jpg" class="avatar-alive h-20 w-20 rounded-2xl object-cover border-2 border-purple-400/60 shadow-[0_0_30px_rgba(168,85,247,0.8)]" alt="Sean, Founder of LoopLogiQ">
         <img src="public/logo.png" class="h-12 w-auto object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
       </div>
 
-      <h1 class="text-2xl sm:text-4xl font-black tracking-tight text-white mb-2">
+      <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">
         LoopLogiQ: Hoop Hopper
       </h1>
-      <p class="text-slate-300 text-xs sm:text-sm font-light mb-6 leading-relaxed">
-        Play as the <strong class="text-purple-300 font-semibold">Owner of LoopLogiQ</strong>! Leap through glowing <span class="text-emerald-400 font-semibold">Business Automation Hoops</span> to convert manual chaos into automated profit!
+      <p class="text-slate-300 text-sm font-light mb-6 leading-relaxed">
+        Play as <strong class="text-purple-300 font-semibold">Sean, Founder of LoopLogiQ</strong>! Leap through glowing <span class="text-emerald-400 font-semibold">LoopLogiQ Infinity Hoops</span> to automate manual tasks and save your business thousands of hours & dollars!
       </p>
 
       <!-- FORM INPUT -->
@@ -94,70 +148,82 @@
             Enter Your Business Name
           </label>
           <input id="businessInput" type="text" required placeholder="e.g. Acme Corp, Bellevue Dental"
-                 class="w-full px-5 py-3.5 rounded-2xl bg-white/10 border border-purple-400/60 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
+                 class="w-full px-5 py-3.5 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
         </div>
-        <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-base sm:text-lg shadow-xl shadow-purple-950/60 transition transform hover:scale-[1.02] active:scale-95 tracking-wide cursor-pointer">
+        <div>
+          <label for="businessUrlInput" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
+            Business Website <span class="text-slate-500 normal-case font-medium">(optional -- we'll pull your logo)</span>
+          </label>
+          <input id="businessUrlInput" type="text" placeholder="e.g. yourbusiness.com"
+                 class="w-full px-5 py-3.5 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
+        </div>
+        <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-lg shadow-xl shadow-purple-950/60 transition transform hover:scale-[1.02] active:scale-95 tracking-wide">
           🚀 START AUTOMATING
         </button>
       </form>
 
-      <div class="mt-4 text-xs text-slate-400 flex items-center justify-center gap-4">
-        <span>⌨️ <strong class="text-slate-200">Space / Up Arrow</strong></span>
-        <span>🖱️ <strong class="text-slate-200">Click / Tap Screen</strong></span>
+      <div class="mt-4 text-xs text-slate-400 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <span>⌨️ <strong class="text-slate-200">Space / Up Arrow</strong> to Jump</span>
+        <span>⚡ <strong class="text-slate-200">Right Arrow</strong> to Accelerate</span>
+        <span>📱 <strong class="text-slate-200">Tap Screen</strong> to Jump, hold ⚡ to Accelerate</span>
       </div>
     </div>
   </div>
 
   <!-- GAME OVER / LEAD CAPTURE FORM MODAL -->
-  <div id="endModal" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/85 backdrop-blur-md">
-    <div class="glass-panel pulse-glow rounded-3xl p-6 sm:p-8 max-w-xl w-full text-center relative overflow-hidden max-h-[92vh] overflow-y-auto">
-      
+  <div id="endModal" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
+    <div class="glass-panel pulse-glow rounded-3xl p-5 sm:p-8 max-w-xl w-full text-center relative overflow-x-hidden overflow-y-auto max-h-[90vh]">
+
+      <!-- LOGO -->
+      <img src="public/logo.png" class="h-12 sm:h-14 w-auto object-contain mx-auto mb-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
+
       <!-- HEADER -->
       <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-3">
         <span>🎉 AUTOMATION VICTORIOUS!</span>
       </div>
-      
+
+      <!-- FINISH LINE FLAG: captures the player's business name (and logo, if a site was given) -->
+      <div id="endFlagBanner" class="inline-flex items-center gap-2 mx-auto mb-3 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-indigo-600/30 border border-purple-400/40">
+        <!-- Finish-line flag: shown only when there's no logo to show instead (a triangular
+             "flagpole" flag reads more like a level-clear flag than a racing checkered flag) -->
+        <span id="endFlagEmoji" class="text-2xl">🚩</span>
+        <img id="endFlagLogo" class="hidden h-8 w-8 rounded-md object-contain bg-white/90 p-1" alt="">
+        <span id="endFlagBusinessName" class="text-base sm:text-lg font-black text-white tracking-wide">Acme Corp</span>
+      </div>
+
       <h2 id="endTitle" class="text-2xl sm:text-3xl font-black text-white mb-2">
         Awesome Job, Acme Corp!
       </h2>
       <p class="text-slate-300 text-xs sm:text-sm font-light mb-6">
-        You leapt through business hoops and solved operational bottlenecks on complete autopilot!
+        You leapt through hoops and solved your business bottlenecks on complete autopilot!
       </p>
 
       <!-- METRICS GRID -->
-      <div class="grid grid-cols-3 gap-3 mb-5">
-        <div class="p-3.5 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
-          <div class="text-[9px] uppercase font-bold text-slate-400">Hours Saved</div>
-          <div id="endHours" class="text-lg sm:text-2xl font-extrabold text-emerald-400 mt-0.5">1,480 hrs</div>
+      <div class="grid grid-cols-3 gap-3 mb-6">
+        <div class="p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Hours Saved</div>
+          <div id="endHours" class="text-xl sm:text-2xl font-extrabold text-emerald-400 mt-1">1,480 hrs</div>
         </div>
-        <div class="p-3.5 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
-          <div class="text-[9px] uppercase font-bold text-slate-400">Cost Saved</div>
-          <div id="endDollars" class="text-lg sm:text-2xl font-extrabold text-purple-300 mt-0.5">$142,500</div>
+        <div class="p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-400">Cost Saved</div>
+          <div id="endDollars" class="text-xl sm:text-2xl font-extrabold text-purple-300 mt-1">$142,500</div>
         </div>
-        <div class="p-3.5 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
-          <div class="text-[9px] uppercase font-bold text-slate-400">ROI Impact</div>
-          <div class="text-lg sm:text-2xl font-extrabold text-fuchsia-400 mt-0.5">412% ROI</div>
+        <div class="p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
+          <div class="text-[10px] uppercase font-bold text-slate-400">ROI Impact</div>
+          <div class="text-xl sm:text-2xl font-extrabold text-fuchsia-400 mt-1">412% ROI</div>
         </div>
       </div>
 
-      <!-- DYNAMIC AUTOMATED HOOPS REPORT -->
-      <div class="mb-5 p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-left">
-        <div class="text-[10px] font-bold text-purple-300 uppercase tracking-wider mb-2.5 flex items-center justify-between">
-          <span>⚙️ Deployed AI Workflows (<span id="endBizName">Acme Corp</span>)</span>
-          <span id="endHoopCount" class="text-emerald-400 font-extrabold">0 Hoops Leapt</span>
-        </div>
-        <div id="endHoopsList" class="flex flex-wrap gap-2">
-          <!-- Dynamically inserted hoop badges -->
-        </div>
-      </div>
+      <!-- RUN RECAP: what got automated vs. what slowed them down along the way -->
+      <div id="runRecap" class="grid sm:grid-cols-2 gap-3 mb-6 text-left"></div>
 
       <!-- LEAD CAPTURE FORM -->
-      <div class="p-5 rounded-2xl bg-purple-950/50 border border-purple-400/40 text-left">
-        <h3 class="text-sm sm:text-base font-bold text-white mb-1">
+      <div class="p-5 rounded-2xl bg-purple-950/40 border border-purple-400/40 text-left">
+        <h3 class="text-base font-bold text-white mb-1">
           Want to make operations this fun & hands-free for real?
         </h3>
-        <p class="text-slate-300 text-xs font-light mb-3.5">
-          Schedule a free 20-minute automation audit with the LoopLogiQ engineering team.
+        <p class="text-slate-300 text-xs font-light mb-4">
+          Fill out your details to schedule a free 20-minute automation audit with the LoopLogiQ team.
         </p>
 
         <form id="leadForm" onsubmit="submitLead(event)" class="space-y-3">
@@ -181,14 +247,16 @@
               <option value="Invoicing & Documents">Primary Bottleneck: Invoicing & Documents</option>
             </select>
           </div>
-          <button type="submit" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-xs sm:text-sm shadow-lg shadow-emerald-950/60 transition transform hover:scale-[1.01] active:scale-95 cursor-pointer">
+          <div class="cf-turnstile" data-sitekey="0x4AAAAAADQGnq0-h0Z6hdIJ" data-theme="dark"></div>
+          <p id="leadFormStatus" class="text-xs text-center hidden" role="status" aria-live="polite"></p>
+          <button type="submit" id="leadSubmitBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-950/60 transition transform hover:scale-[1.01] active:scale-95">
             📞 Schedule My Free 20-Min Audit
           </button>
         </form>
       </div>
 
       <div class="mt-4 flex items-center justify-center gap-4">
-        <button onclick="restartGame()" class="text-xs text-purple-300 font-semibold hover:underline cursor-pointer">
+        <button onclick="restartGame()" class="text-xs text-purple-300 font-semibold hover:underline">
           🔄 Play Again
         </button>
         <span class="text-slate-600">•</span>
@@ -209,75 +277,70 @@
     let scoreHours = 0;
     let scoreDollars = 0;
     let frameCount = 0;
-    let animId = null;
+    let lastInputFrame = 0;
+    const IDLE_NUDGE_FRAMES = 150; // ~2.5s of no jump input before the nudge shows
 
-    // AUDIO SYNTHESIZER
+    // ACCELERATE: holding the right arrow (or on-screen button) lets the player actively
+    // speed up, on top of the base pace. Gives real agency and makes the slowdown penalty
+    // read as a much bigger contrast against a faster baseline.
+    let accelerating = false;
+
+    // AUDIO SYNTHESIZER (WEB AUDIO API)
     const AudioCtx = window.AudioContext || window.webkitAudioContext;
     let audioCtx = null;
 
     function initAudio() {
-      if (!audioCtx) {
-        audioCtx = new AudioCtx();
-      }
-      if (audioCtx.state === 'suspended') {
-        audioCtx.resume();
-      }
+      if (!audioCtx) audioCtx = new AudioCtx();
     }
 
     function playJumpSound() {
       if (!audioCtx) return;
-      try {
-        const osc = audioCtx.createOscillator();
-        const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(220, audioCtx.currentTime);
-        osc.frequency.exponentialRampToValueAtTime(580, audioCtx.currentTime + 0.12);
-        gain.gain.setValueAtTime(0.25, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.12);
-        osc.connect(gain);
-        gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.12);
-      } catch(e){}
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sine';
+      osc.frequency.setValueAtTime(220, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(580, audioCtx.currentTime + 0.15);
+      gain.gain.setValueAtTime(0.3, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.01, audioCtx.currentTime + 0.15);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.15);
     }
 
     function playHoopSound() {
       if (!audioCtx) return;
-      try {
-        const notes = [523.25, 659.25, 783.99, 1046.50];
-        notes.forEach((freq, idx) => {
-          const osc = audioCtx.createOscillator();
-          const gain = audioCtx.createGain();
-          osc.type = 'triangle';
-          osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.04);
-          gain.gain.setValueAtTime(0.18, audioCtx.currentTime + idx * 0.04);
-          gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.04 + 0.2);
-          osc.connect(gain);
-          gain.connect(audioCtx.destination);
-          osc.start(audioCtx.currentTime + idx * 0.04);
-          osc.stop(audioCtx.currentTime + idx * 0.04 + 0.2);
-        });
-      } catch(e){}
-    }
-
-    function playCoinSound() {
-      if (!audioCtx) return;
-      try {
+      const notes = [523.25, 659.25, 783.99, 1046.50]; // C5, E5, G5, C6
+      notes.forEach((freq, idx) => {
         const osc = audioCtx.createOscillator();
         const gain = audioCtx.createGain();
-        osc.type = 'sine';
-        osc.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5
-        osc.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.08); // E6
-        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
-        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+        osc.type = 'triangle';
+        osc.frequency.setValueAtTime(freq, audioCtx.currentTime + idx * 0.05);
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime + idx * 0.05);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + idx * 0.05 + 0.25);
         osc.connect(gain);
         gain.connect(audioCtx.destination);
-        osc.start();
-        osc.stop(audioCtx.currentTime + 0.2);
-      } catch(e){}
+        osc.start(audioCtx.currentTime + idx * 0.05);
+        osc.stop(audioCtx.currentTime + idx * 0.05 + 0.25);
+      });
     }
 
-    // RESIZE CANVAS CLEANLY
+    function playObstacleHitSound() {
+      if (!audioCtx) return;
+      const osc = audioCtx.createOscillator();
+      const gain = audioCtx.createGain();
+      osc.type = 'sawtooth';
+      osc.frequency.setValueAtTime(320, audioCtx.currentTime);
+      osc.frequency.exponentialRampToValueAtTime(90, audioCtx.currentTime + 0.35);
+      gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+      gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.35);
+      osc.connect(gain);
+      gain.connect(audioCtx.destination);
+      osc.start();
+      osc.stop(audioCtx.currentTime + 0.35);
+    }
+
+    // RESIZE CANVAS
     function resizeCanvas() {
       canvas.width = window.innerWidth;
       canvas.height = window.innerHeight;
@@ -285,9 +348,10 @@
     window.addEventListener('resize', resizeCanvas);
     resizeCanvas();
 
-    // LOAD AVATAR & LOGO
+    // PLAYER SPRITE (AVATAR)
     const avatarImg = new Image();
-    avatarImg.src = 'public/avatar.jpg';
+    avatarImg.src = 'public/character.png';
+    const SPRITE_ASPECT = 304 / 719; // character.png's cropped width/height (transparent background)
 
     const logoImg = new Image();
     logoImg.src = 'public/logo.png';
@@ -295,55 +359,103 @@
     const player = {
       x: 140,
       y: window.innerHeight / 2,
-      radius: 38,
-      vy: -4,
-      gravity: 0.35,
-      jumpPower: -9.5,
-      rotation: 0
+      radius: 36,
+      vy: 0,
+      // Softer jump: less height, gentler arc -- smoother and easier to control than a
+      // sharp, high pop.
+      gravity: 0.3,
+      jumpPower: -7.8,
+      rotation: 0,
+      // SPRITE ANIMATION STATE (squash & stretch, driven procedurally off the
+      // single avatar portrait since there's no separate frame art per pose)
+      scaleX: 1,
+      scaleY: 1,
+      squashTimer: 0,   // counts down after a jump press: brief anticipation squat
+      popTimer: 0,      // counts down after passing a hoop: a little celebratory pop
+      idlePhase: 0       // drives the gentle at-rest breathing bob
     };
 
     let hoops = [];
-    let coins = [];
     let obstacles = [];
     let particles = [];
-    let popups = [];
-    let collectedHoops = [];
 
-    const hoopTypes = [
-      { name: '✨ SMS Recovery Hoop', color: '#34d399', hrs: 150, dol: 12500 },
-      { name: '⚡ 24/7 Booking Hoop', color: '#c084fc', hrs: 180, dol: 15000 },
-      { name: '💳 Auto Billing Hoop', color: '#38bdf8', hrs: 140, dol: 10000 },
-      { name: '🚀 CRM Sync Hoop', color: '#f472b6', hrs: 200, dol: 18000 }
-    ];
+    // SLOWDOWN STATE: hitting a manual-task obstacle no longer ends the run -- it slows the
+    // business (world scroll speed) down, and repeated jump/tap input ("hit forward") is what
+    // ramps it back up to full speed.
+    const SLOWDOWN_TAPS_REQUIRED = 10;
+    let slowdownActive = false;
+    let slowdownTapsLeft = 0;
 
-    const coinTypes = [
-      { text: '💵 +$2,500', val: 2500, color: '#34d399' },
-      { text: '💰 +$5,000', val: 5000, color: '#fbbf24' },
-      { text: '💎 +$10,000', val: 10000, color: '#c084fc' }
-    ];
+    // WIN CONDITION: the run ends in a win once there's a compelling automation story to
+    // show/sell -- enough hoops cleared for a strong hours/dollars-saved number -- instead of
+    // running forever with no real finish line.
+    const WIN_HOOPS_REQUIRED = 6;
+    let hoopsPassed = 0;
 
+    // SESSION TIMER: caps a run at 45s -- long enough to feel the mechanic and land a
+    // couple of hoops, short enough that nobody gets bored waiting for the win condition.
+    const RUN_SECONDS = 45;
+    let timeLeft = RUN_SECONDS;
+
+    // One obstacle per LoopLogiQ demo (/demos/*) so the pain point that lands depends on which
+    // audience is playing -- a couple reference the player's own business name for a personal hit.
     const obstacleTypes = [
-      { text: '📞 Missed Call', color: '#ef4444' },
-      { text: '📧 Unread Inbox', color: '#f59e0b' },
-      { text: '💸 Lead Leakage', color: '#ec4899' },
-      { text: '📝 Manual Entry', color: '#3b82f6' }
+      { text: () => `📞 Missed Call at ${businessName}`, color: '#ef4444', category: 'Missed-Call Recovery' },
+      { text: () => '🪑 No-Show Appointment', color: '#f59e0b', category: 'No-Show Reduction' },
+      { text: () => '📄 Manual Proposal Draft', color: '#3b82f6', category: 'AI Intake & Proposals' },
+      { text: () => '⭐ Unanswered Review', color: '#eab308', category: 'Review & Reputation' },
+      { text: () => '📧 Cold Lead Follow-Up', color: '#ec4899', category: 'Inquiry Follow-Up' },
+      { text: () => '💳 Late Invoice Chase', color: '#22c55e', category: 'Payments & Billing' },
+      { text: () => `❓ Unanswered FAQ at ${businessName}`, color: '#8b5cf6', category: 'FAQ & Booking' }
     ];
 
-    function doJump() {
+    // Tracks what actually happened during the run so the end report can call out
+    // specifically which automations were captured vs. which pain points slowed them down.
+    let missedAutomations = [];
+    let capturedAutomations = [];
+
+    function updateSlowdownBanner() {
+      const banner = document.getElementById('slowdownBanner');
+      const progress = document.getElementById('slowdownProgress');
+      if (!banner || !progress) return;
+      banner.classList.toggle('hidden', !slowdownActive);
+      const pct = slowdownActive
+        ? Math.round(((SLOWDOWN_TAPS_REQUIRED - slowdownTapsLeft) / SLOWDOWN_TAPS_REQUIRED) * 100)
+        : 0;
+      progress.style.width = pct + '%';
+    }
+
+    function triggerSlowdown() {
+      slowdownActive = true;
+      slowdownTapsLeft = SLOWDOWN_TAPS_REQUIRED;
+      updateSlowdownBanner();
+    }
+
+    function jump() {
       if (!isPlaying) return;
-      initAudio();
+      lastInputFrame = frameCount;
+      document.getElementById('idleBanner').classList.add('hidden');
       player.vy = player.jumpPower;
+      player.squashTimer = 8; // brief anticipation squat-and-launch on every jump
+      initAudio();
       playJumpSound();
 
-      // Jump particles
-      for (let i = 0; i < 7; i++) {
+      // Every jump also counts as "hitting forward" to power through a slowdown
+      if (slowdownActive) {
+        slowdownTapsLeft = Math.max(0, slowdownTapsLeft - 1);
+        if (slowdownTapsLeft === 0) slowdownActive = false;
+        updateSlowdownBanner();
+      }
+
+      // Add jump particles
+      for (let i = 0; i < 6; i++) {
         particles.push({
           x: player.x,
-          y: player.y + player.radius - 5,
+          y: player.y + player.radius,
           vx: (Math.random() - 0.5) * 3,
           vy: Math.random() * 3 + 2,
           radius: Math.random() * 4 + 2,
-          color: '#c084fc',
+          color: '#a855f7',
           life: 1.0
         });
       }
@@ -352,116 +464,160 @@
     window.addEventListener('keydown', (e) => {
       if (e.code === 'Space' || e.code === 'ArrowUp') {
         e.preventDefault();
-        doJump();
+        jump();
+      }
+      if (e.code === 'ArrowRight') {
+        e.preventDefault();
+        accelerating = true;
       }
     });
-
+    window.addEventListener('keyup', (e) => {
+      if (e.code === 'ArrowRight') accelerating = false;
+    });
+    window.addEventListener('blur', () => { accelerating = false; });
     window.addEventListener('touchstart', (e) => {
-      if (isPlaying) {
+      // Only treat this as a jump if the touch actually landed on the canvas -- otherwise
+      // taps on HUD controls (like "End Run") never reach their buttons because
+      // preventDefault() here was blocking the click that would normally follow.
+      if (isPlaying && e.target === canvas) {
         e.preventDefault();
-        doJump();
+        jump();
       }
     }, { passive: false });
+    canvas.addEventListener('mousedown', () => jump());
 
-    canvas.addEventListener('mousedown', (e) => {
-      if (isPlaying) {
-        doJump();
+    // Accelerate button: press-and-hold, both mouse and touch.
+    const accelerateBtn = document.getElementById('accelerateBtn');
+    accelerateBtn.addEventListener('pointerdown', (e) => { e.preventDefault(); accelerating = true; });
+    accelerateBtn.addEventListener('pointerup', () => { accelerating = false; });
+    accelerateBtn.addEventListener('pointerleave', () => { accelerating = false; });
+    accelerateBtn.addEventListener('pointercancel', () => { accelerating = false; });
+
+    // Best-effort logo lookup from an optional business URL, using Clearbit's public logo
+    // API (no key needed). Purely cosmetic on the results screen -- if the domain has no
+    // logo there, the <img> just stays hidden via onerror.
+    let businessLogoUrl = '';
+    function extractDomain(rawUrl) {
+      if (!rawUrl) return '';
+      let value = rawUrl.trim();
+      if (!value) return '';
+      if (!/^https?:\/\//i.test(value)) value = 'https://' + value;
+      try {
+        return new URL(value).hostname.replace(/^www\./i, '');
+      } catch {
+        return '';
       }
-    });
+    }
 
     function startGame(e) {
       if (e) e.preventDefault();
-      initAudio();
-
       const input = document.getElementById('businessInput').value.trim();
       businessName = input || "Acme Corp";
 
+      // Clearbit's free public logo API was discontinued, so this uses Google's favicon
+      // service instead -- smaller than a full logo, but reliably resolves for real domains.
+      const domain = extractDomain(document.getElementById('businessUrlInput').value);
+      businessLogoUrl = domain ? `https://www.google.com/s2/favicons?domain=${domain}&sz=128` : '';
+
       document.getElementById('hudBusinessName').innerText = businessName;
-      document.getElementById('startModal').style.display = 'none';
+      document.getElementById('startModal').classList.add('hidden');
       document.getElementById('hud').classList.remove('hidden');
+      document.getElementById('accelerateBtn').classList.remove('hidden');
 
       isPlaying = true;
       scoreHours = 0;
       scoreDollars = 0;
+      hoopsPassed = 0;
+      missedAutomations = [];
+      capturedAutomations = [];
+      timeLeft = RUN_SECONDS;
+      document.getElementById('hudTimer').innerText = '0:' + String(RUN_SECONDS).padStart(2, '0');
+      lastInputFrame = 0;
+      document.getElementById('idleBanner').classList.add('hidden');
+      slowdownActive = false;
+      slowdownTapsLeft = 0;
+      updateSlowdownBanner();
       hoops = [];
-      coins = [];
       obstacles = [];
       particles = [];
-      popups = [];
-      collectedHoops = [];
-      player.y = canvas.height / 2 - 40;
-      player.vy = -4;
+      player.y = canvas.height / 2;
+      player.vy = 0;
+      player.scaleX = 1;
+      player.scaleY = 1;
+      player.squashTimer = 0;
+      player.popTimer = 0;
+      player.idlePhase = 0;
       frameCount = 0;
 
-      // Guaranteed First Hoop & Money item right at start!
-      hoops.push({
-        x: canvas.width + 100,
-        y: canvas.height / 2,
-        radius: 70,
-        name: '✨ SMS Recovery Hoop',
-        color: '#34d399',
-        hrs: 150,
-        dol: 12500,
-        passed: false
-      });
+      initAudio();
+      requestAnimationFrame(gameLoop);
+    }
 
-      coins.push({
-        x: canvas.width + 240,
-        y: canvas.height / 2 - 30,
-        text: '💰 +$5,000',
-        val: 5000,
-        color: '#fbbf24',
-        radius: 24,
-        collected: false
-      });
+    // Most hoops are small, quick wins; a rare big one lands like a real automation win.
+    const HOOP_VALUES = [
+      { hours: 1, dollars: 100, weight: 30, star: false },
+      { hours: 2, dollars: 250, weight: 30, star: false },
+      { hours: 5, dollars: 600, weight: 25, star: false },
+      { hours: 100, dollars: 12000, weight: 8, star: true }
+    ];
 
-      resizeCanvas();
-      if (animId) cancelAnimationFrame(animId);
-      animId = requestAnimationFrame(gameLoop);
+    // The bonus star hoop only starts showing up after a few smaller automations have
+    // already landed -- a big win should read as the payoff for stacking up wins, not
+    // something that can happen on literally the first hoop of a run.
+    const BIG_WIN_UNLOCK_HOOPS = 3;
+
+    function pickHoopValue() {
+      const pool = hoopsPassed >= BIG_WIN_UNLOCK_HOOPS
+        ? HOOP_VALUES
+        : HOOP_VALUES.filter(v => !v.star);
+      const totalWeight = pool.reduce((sum, v) => sum + v.weight, 0);
+      let roll = Math.random() * totalWeight;
+      for (const v of pool) {
+        if (roll < v.weight) return v;
+        roll -= v.weight;
+      }
+      return pool[0];
     }
 
     function spawnHoop() {
-      const type = hoopTypes[Math.floor(Math.random() * hoopTypes.length)];
-      const topY = Math.random() * (canvas.height - 360) + 140;
+      // Spread across a wide band of the play area (not glued to one exact line) and
+      // gently bob as they float across, so hoops don't all pile up in the same spot.
+      const baseY = canvas.height / 2 + (Math.random() - 0.5) * 260;
+      const value = pickHoopValue();
       hoops.push({
-        x: canvas.width + 70,
-        y: topY,
-        radius: 68,
-        name: type.name,
-        color: type.color,
-        hrs: type.hrs,
-        dol: type.dol,
-        passed: false
-      });
-    }
-
-    function spawnCoin() {
-      const type = coinTypes[Math.floor(Math.random() * coinTypes.length)];
-      const coinY = Math.random() * (canvas.height - 260) + 130;
-      coins.push({
         x: canvas.width + 60,
-        y: coinY,
-        text: type.text,
-        val: type.val,
-        color: type.color,
-        radius: 22,
-        collected: false
+        baseY,
+        y: baseY,
+        phase: Math.random() * Math.PI * 2,
+        radius: value.star ? 78 : 65,
+        passed: false,
+        value
       });
     }
 
     function spawnObstacle() {
       const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-      const obsY = Math.random() * (canvas.height - 280) + 140;
+      // Spread across the play area and bob gently as they float across, same as hoops,
+      // instead of every obstacle sitting on the same line.
+      const baseY = canvas.height / 2 + (Math.random() - 0.5) * 280;
+      const text = type.text();
+      ctx.font = 'bold 13px Outfit';
+      const width = Math.max(140, ctx.measureText(text).width + 32);
       obstacles.push({
         x: canvas.width + 80,
-        y: obsY,
-        text: type.text,
-        color: type.color
+        baseY,
+        y: baseY,
+        phase: Math.random() * Math.PI * 2,
+        text,
+        color: type.color,
+        category: type.category,
+        width,
+        passed: false
       });
     }
 
     function createSparkles(x, y, color) {
-      for (let i = 0; i < 22; i++) {
+      for (let i = 0; i < 24; i++) {
         const angle = Math.random() * Math.PI * 2;
         const speed = Math.random() * 6 + 2;
         particles.push({
@@ -478,55 +634,56 @@
 
     function gameOver() {
       isPlaying = false;
+      accelerating = false;
       document.getElementById('hud').classList.add('hidden');
+      document.getElementById('accelerateBtn').classList.add('hidden');
+      document.getElementById('idleBanner').classList.add('hidden');
       document.getElementById('endTitle').innerText = `Awesome Job, ${businessName}!`;
-      document.getElementById('endBizName').innerText = businessName;
+      document.getElementById('endFlagBusinessName').innerText = businessName;
+      const flagLogo = document.getElementById('endFlagLogo');
+      const flagEmoji = document.getElementById('endFlagEmoji');
+      if (businessLogoUrl) {
+        // Logo takes the flag's place -- if it fails to load, fall back to the flag
+        // instead of leaving the banner looking empty.
+        flagLogo.onerror = () => {
+          flagLogo.classList.add('hidden');
+          flagEmoji.classList.remove('hidden');
+        };
+        flagLogo.src = businessLogoUrl;
+        flagLogo.classList.remove('hidden');
+        flagEmoji.classList.add('hidden');
+      } else {
+        flagLogo.classList.add('hidden');
+        flagEmoji.classList.remove('hidden');
+      }
       document.getElementById('endHours').innerText = `${scoreHours.toLocaleString()} hrs`;
       document.getElementById('endDollars').innerText = `$${scoreDollars.toLocaleString()}`;
 
-      // Render Dynamic Collected Hoops Badges
-      const listEl = document.getElementById('endHoopsList');
-      const countEl = document.getElementById('endHoopCount');
-      listEl.innerHTML = '';
-
-      if (collectedHoops.length === 0) {
-        // Fallback default hoops list if user died right away
-        collectedHoops = [
-          { name: '✨ SMS Recovery', hrs: 150, color: '#34d399' },
-          { name: '⚡ 24/7 Booking', hrs: 180, color: '#c084fc' },
-          { name: '🚀 CRM Sync', hrs: 200, color: '#f472b6' }
-        ];
-        scoreHours = 530;
-        scoreDollars = 45500;
-        document.getElementById('endHours').innerText = `530 hrs`;
-        document.getElementById('endDollars').innerText = `$45,500`;
+      // RUN RECAP: what actually got captured vs. what slowed them down, so the report
+      // isn't just a total but a story of the run.
+      const recap = document.getElementById('runRecap');
+      recap.innerHTML = '';
+      if (capturedAutomations.length) {
+        const box = document.createElement('div');
+        box.className = 'p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30';
+        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-emerald-300 mb-2">✅ Automations You Captured</div>' +
+          '<ul class="text-xs text-slate-200 space-y-1">' +
+          capturedAutomations.map(a => `<li>• ${a}</li>`).join('') + '</ul>';
+        recap.appendChild(box);
       }
-
-      countEl.innerText = `${collectedHoops.length} Systems Deployed`;
-
-      // Aggregate counts by hoop name
-      const hoopCounts = {};
-      collectedHoops.forEach(h => {
-        if (!hoopCounts[h.name]) {
-          hoopCounts[h.name] = { count: 0, hrs: 0, color: h.color };
-        }
-        hoopCounts[h.name].count++;
-        hoopCounts[h.name].hrs += h.hrs;
-      });
-
-      Object.keys(hoopCounts).forEach(key => {
-        const item = hoopCounts[key];
-        const badge = document.createElement('div');
-        badge.className = 'px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border shadow-lg';
-        badge.style.backgroundColor = `${item.color}22`;
-        badge.style.borderColor = `${item.color}88`;
-        badge.style.color = '#ffffff';
-        badge.innerHTML = `<span>${key}</span> <span style="color:${item.color}; font-weight:800;">(${item.count > 1 ? item.count + 'x • ' : ''}+${item.hrs} Hrs)</span>`;
-        listEl.appendChild(badge);
-      });
+      const missedUnique = [...new Set(missedAutomations)];
+      if (missedUnique.length) {
+        const box = document.createElement('div');
+        box.className = 'p-4 rounded-2xl bg-red-500/10 border border-red-500/30';
+        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-red-300 mb-2">⚠️ What Slowed You Down</div>' +
+          '<ul class="text-xs text-slate-200 space-y-1">' +
+          missedUnique.map(m => `<li>• ${m}</li>`).join('') + '</ul>';
+        recap.appendChild(box);
+      }
 
       document.getElementById('endModal').classList.remove('hidden');
 
+      // CONFETTI BURST
       confetti({
         particleCount: 120,
         spread: 80,
@@ -536,22 +693,78 @@
 
     function restartGame() {
       document.getElementById('endModal').classList.add('hidden');
-      document.getElementById('startModal').style.display = 'flex';
+      document.getElementById('startModal').classList.remove('hidden');
     }
 
-    function submitLead(e) {
+    async function submitLead(e) {
       e.preventDefault();
+
+      const form = e.target;
+      const submitBtn = document.getElementById('leadSubmitBtn');
+      const formStatus = document.getElementById('leadFormStatus');
       const name = document.getElementById('leadName').value;
       const email = document.getElementById('leadEmail').value;
-      
-      confetti({
-        particleCount: 150,
-        spread: 100,
-        origin: { y: 0.5 }
-      });
+      const phone = document.getElementById('leadPhone').value;
+      const focus = document.getElementById('leadFocus').value;
 
-      alert(`🎉 Thank you, ${name}! Your automation audit request for ${businessName} has been received. We will reach out to ${email} within 24 hours!\n\n🌐 Visit www.looplogiq.com for more info.`);
-      restartGame();
+      const token = form.querySelector('[name="cf-turnstile-response"]')?.value;
+      if (!token) {
+        formStatus.textContent = 'Please complete the security check.';
+        formStatus.className = 'text-xs text-center text-red-400';
+        formStatus.classList.remove('hidden');
+        return;
+      }
+
+      submitBtn.disabled = true;
+      submitBtn.textContent = 'Sending...';
+
+      const payload = {
+        name,
+        email,
+        phone,
+        message: `Lead captured via the LoopLogiQ Hoop Hopper game. Business: ${businessName}. Primary bottleneck: ${focus}. In-game result: ${scoreHours.toLocaleString()} hrs / $${scoreDollars.toLocaleString()} saved (simulated).`,
+        lead_source: 'Hoop Hopper Game',
+        business_name: businessName,
+        business_website: document.getElementById('businessUrlInput').value.trim(),
+        primary_bottleneck: focus,
+        'cf-turnstile-response': token,
+        submitted_at_pst: new Date().toLocaleString('en-US', {
+          timeZone: 'America/Los_Angeles',
+          dateStyle: 'medium',
+          timeStyle: 'short'
+        })
+      };
+
+      try {
+        const response = await fetch('https://n8n.looplogiq.com/webhook/looplogiq-contact', {
+          method: 'POST',
+          headers: { 'Content-Type': 'application/json' },
+          body: JSON.stringify(payload),
+        });
+
+        if (!response.ok) {
+          throw new Error(`Webhook returned ${response.status}: ${await response.text()}`);
+        }
+
+        confetti({
+          particleCount: 150,
+          spread: 100,
+          origin: { y: 0.5 }
+        });
+
+        alert(`🎉 Thank you, ${name}! Your automation audit request for ${businessName} has been received. We will reach out to ${email} within 24 hours!\n\n🌐 Visit www.looplogiq.com for more info.`);
+        form.reset();
+        restartGame();
+      } catch (err) {
+        console.error('HOOP HOPPER LEAD WEBHOOK ERROR:', err);
+        formStatus.textContent = 'Something went wrong sending your request. Please try again.';
+        formStatus.className = 'text-xs text-center text-red-400';
+        formStatus.classList.remove('hidden');
+      } finally {
+        submitBtn.disabled = false;
+        submitBtn.textContent = '📞 Schedule My Free 20-Min Audit';
+        if (window.turnstile) turnstile.reset();
+      }
     }
 
     // MAIN GAME LOOP
@@ -559,163 +772,207 @@
       if (!isPlaying) return;
       frameCount++;
 
+      // SESSION TIMER: keeps a run to ~45s so it's long enough to feel the mechanic but
+      // short enough nobody gets bored waiting to hit the hoop-based win condition.
+      if (frameCount % 60 === 0 && timeLeft > 0) {
+        timeLeft--;
+        document.getElementById('hudTimer').innerText = '0:' + String(timeLeft).padStart(2, '0');
+        if (timeLeft <= 0) {
+          gameOver();
+          return;
+        }
+      }
+
+      // IDLE NUDGE: if they just let the character stand there, remind them that not
+      // automating is its own kind of slowdown.
+      const idleBanner = document.getElementById('idleBanner');
+      if (frameCount - lastInputFrame > IDLE_NUDGE_FRAMES) {
+        idleBanner.classList.remove('hidden');
+      }
+
       ctx.clearRect(0, 0, canvas.width, canvas.height);
 
-      // PLAYER PHYSICS
-      player.vy += player.gravity;
+      // UPDATE PLAYER PHYSICS
+      // Ease gravity in for the first ~2.5s so new players get a steady start instead of
+      // needing a near-instant jump. Fall speed is capped permanently (not just early on)
+      // so the player stays floaty and generally near the middle of the screen -- the floor
+      // is rarely actually reached instead of being a normal part of the rhythm.
+      const GRACE_FRAMES = 150;
+      const gravityRamp = Math.min(1, frameCount / GRACE_FRAMES);
+      player.vy += player.gravity * gravityRamp;
+      player.vy = Math.min(player.vy, 2.2);
       player.y += player.vy;
       player.rotation = Math.min(Math.PI / 6, Math.max(-Math.PI / 6, player.vy * 0.04));
 
-      // Initial 4-second Grace Period Safety Bounce!
+      // SPRITE ANIMATION: procedural squash & stretch off the single portrait,
+      // standing in for separate idle/rise/fall/pop pose frames.
+      player.idlePhase += 0.06;
+      if (player.squashTimer > 0) {
+        // anticipation squat right as a jump is pressed: brief wide-and-short,
+        // springs back into an elongated launch stretch
+        const t = player.squashTimer / 8;
+        player.scaleX = 1 + t * 0.22;
+        player.scaleY = 1 - t * 0.22;
+        player.squashTimer--;
+      } else if (player.popTimer > 0) {
+        // celebratory pop right after clearing a hoop
+        const t = player.popTimer / 14;
+        player.scaleX = 1 - t * 0.14;
+        player.scaleY = 1 + t * 0.14;
+        player.popTimer--;
+      } else {
+        // in-air stretch keyed off vertical speed: elongated rising into a
+        // gentle at-rest breathing bob when velocity is near zero
+        const speedStretch = Math.min(Math.abs(player.vy) * 0.018, 0.18);
+        const breathing = Math.sin(player.idlePhase) * 0.02;
+        player.scaleY = 1 + speedStretch + breathing;
+        player.scaleX = 1 - speedStretch * 0.6 + breathing * -0.5;
+      }
+
+      // Touching the ground is a manual-task slowdown too, not a crash -- the whole point
+      // is that friction slows you down, it never ends the run. A little bounce keeps them
+      // back up in the play area instead of getting stuck against the floor.
       if (player.y + player.radius > canvas.height - 20) {
-        if (frameCount < 240) {
-          player.y = canvas.height - 20 - player.radius;
-          player.vy = -8.5; // Safety Bounce!
-          createSparkles(player.x, player.y, '#c084fc');
-        } else {
-          player.y = canvas.height - 20 - player.radius;
-          gameOver();
+        player.y = canvas.height - 20 - player.radius;
+        player.vy = -6;
+        if (!slowdownActive) {
+          createSparkles(player.x, player.y, '#ef4444');
+          playObstacleHitSound();
         }
+        triggerSlowdown();
+        // Hitting the floor is exactly the "not automating" moment -- show the nudge
+        // right away instead of waiting out the generic idle timer.
+        document.getElementById('idleBanner').classList.remove('hidden');
       }
       if (player.y - player.radius < 0) {
         player.y = player.radius;
         player.vy = 0;
       }
 
-      // SPAWN OBJECTS (Gentle pacing at start)
-      if (frameCount > 60 && frameCount % 120 === 0) spawnHoop();
-      if (frameCount % 90 === 45) spawnCoin();
-      if (frameCount > 300 && frameCount % 180 === 0) spawnObstacle();
+      // SPAWN OBJECTS
+      // Hoops spaced out further so only one is really in play at a time -- keeps the
+      // screen clear instead of several overlapping rings at once.
+      // First obstacle is held back so players get a few free hoops to find their rhythm
+      // before anything can end the run.
+      if (frameCount % 170 === 0) spawnHoop();
+      // Fewer, clearer obstacles -- spaced well apart so the screen never feels cluttered.
+      if (frameCount > 260 && frameCount % 380 === 0) spawnObstacle();
 
-      // DRAW & UPDATE FLOATING MONEY COINS
-      for (let i = coins.length - 1; i >= 0; i--) {
-        const c = coins[i];
-        c.x -= 4.0;
+      // WORLD SPEED: a manual-task hit slows the business down to a crawl; repeated jump/tap
+      // input ramps it back up to full speed, same idea as automating your way out of busywork.
+      // Holding the right arrow accelerates on top of that -- gives the player real agency
+      // over pace, and makes a slowdown hit read as a much bigger, clearly visible drop
+      // against a faster baseline instead of barely registering.
+      const slowdownFactor = slowdownActive
+        ? 0.12 + 0.88 * ((SLOWDOWN_TAPS_REQUIRED - slowdownTapsLeft) / SLOWDOWN_TAPS_REQUIRED)
+        : 1;
+      const accelFactor = accelerating ? 1.7 : 1;
+      const worldSpeed = slowdownFactor * accelFactor;
 
-        ctx.save();
-        ctx.shadowColor = c.color;
-        ctx.shadowBlur = 18;
-        ctx.fillStyle = 'rgba(15, 12, 33, 0.90)';
-        ctx.strokeStyle = c.color;
-        ctx.lineWidth = 2.5;
-        ctx.beginPath();
-        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
-        ctx.fill();
-        ctx.stroke();
-
-        ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px Outfit';
-        ctx.textAlign = 'center';
-        ctx.fillText(c.text, c.x, c.y + 4);
-        ctx.restore();
-
-        // CHECK COIN PICKUP
-        const dist = Math.hypot(player.x - c.x, player.y - c.y);
-        if (!c.collected && dist < player.radius + c.radius) {
-          c.collected = true;
-          scoreDollars += c.val;
-          playCoinSound();
-          createSparkles(c.x, c.y, c.color);
-
-          popups.push({
-            x: c.x,
-            y: c.y - 20,
-            text: `${c.text} Saved!`,
-            color: c.color,
-            life: 1.0
-          });
-          coins.splice(i, 1);
-          continue;
-        }
-
-        if (c.x < -60) coins.splice(i, 1);
-      }
-
-      // DRAW & UPDATE HOOPS
+      // UPDATE & DRAW HOOPS (LOOPLOGIQ INFINITY HOOPS)
       for (let i = hoops.length - 1; i >= 0; i--) {
         const h = hoops[i];
-        h.x -= 4.2;
+        h.x -= 5.4 * worldSpeed;
+        h.y = h.baseY + Math.sin(frameCount * 0.035 + h.phase) * 18; // gentle float
 
-        // Draw Outer Glowing Hoop
+        // Draw Glowing Hoop Container -- bonus/star hoops get a gold ring instead of purple
+        const ringColor = h.value.star ? '#facc15' : '#c084fc';
         ctx.save();
-        ctx.shadowColor = h.color;
-        ctx.shadowBlur = 25;
-        ctx.strokeStyle = h.color;
-        ctx.lineWidth = 7;
+        ctx.shadowColor = h.value.star ? '#facc15' : '#a855f7';
+        ctx.shadowBlur = h.value.star ? 34 : 25;
+        ctx.strokeStyle = ringColor;
+        ctx.lineWidth = 8;
         ctx.beginPath();
         ctx.arc(h.x, h.y, h.radius, 0, Math.PI * 2);
         ctx.stroke();
 
-        // Inner Ring
-        ctx.strokeStyle = '#ffffff';
-        ctx.lineWidth = 2;
+        // Draw Inner Glowing Ring
+        ctx.strokeStyle = '#34d399';
+        ctx.lineWidth = 3;
         ctx.beginPath();
         ctx.arc(h.x, h.y, h.radius - 8, 0, Math.PI * 2);
         ctx.stroke();
 
         // Label Inside Hoop
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 11px Outfit';
+        ctx.font = 'bold 12px Outfit';
         ctx.textAlign = 'center';
-        ctx.fillText(h.name, h.x, h.y - 10);
-        ctx.fillStyle = '#34d399';
-        ctx.fillText(`+${h.hrs} Hrs`, h.x, h.y + 12);
+        ctx.fillText(h.value.star ? '⭐ BIG WIN' : 'LoopLogiQ', h.x, h.y - 12);
+        ctx.fillStyle = h.value.star ? '#facc15' : '#34d399';
+        ctx.fillText(`+${h.value.hours.toLocaleString()} Hrs`, h.x, h.y + 12);
         ctx.restore();
 
-        // CHECK PASSING HOOP
+        // CHECK PLAYER PASSING HOOP
         const dist = Math.hypot(player.x - h.x, player.y - h.y);
         if (!h.passed && dist < h.radius) {
           h.passed = true;
-          scoreHours += h.hrs;
-          scoreDollars += h.dol;
-          collectedHoops.push({ name: h.name, hrs: h.hrs, color: h.color });
+          scoreHours += h.value.hours;
+          scoreDollars += h.value.dollars;
+          hoopsPassed++;
+          capturedAutomations.push(h.value.star ? `⭐ Big Win (+${h.value.hours} hrs)` : `+${h.value.hours} hrs`);
+          player.popTimer = 14; // little celebratory pop on the sprite
           playHoopSound();
-          createSparkles(h.x, h.y, h.color);
+          createSparkles(h.x, h.y, h.value.star ? '#facc15' : '#34d399');
 
-          popups.push({
-            x: h.x,
-            y: h.y - 30,
-            text: `+${h.hrs} Hrs Saved!`,
-            color: '#34d399',
-            life: 1.0
-          });
+          if (hoopsPassed >= WIN_HOOPS_REQUIRED) {
+            gameOver();
+          }
+        }
+
+        // Skipping an automation opportunity costs you too -- a missed hoop slows the
+        // business down, same lesson as hitting a manual-task obstacle. Guarded so it
+        // only fires once per hoop as it exits, not every frame while off-screen.
+        if (!h.passed && !h.missed && h.x < -h.radius) {
+          h.missed = true;
+          triggerSlowdown();
         }
 
         if (h.x < -100) hoops.splice(i, 1);
       }
 
-      // DRAW & UPDATE OBSTACLES
+      // UPDATE & DRAW OBSTACLES (MANUAL TASKS)
       for (let i = obstacles.length - 1; i >= 0; i--) {
         const o = obstacles[i];
-        o.x -= 4.5;
+        o.x -= 5.2 * worldSpeed;
+        o.y = o.baseY + Math.sin(frameCount * 0.035 + o.phase) * 18; // gentle float
 
         ctx.save();
+        ctx.font = 'bold 13px Outfit';
+        ctx.textAlign = 'center';
+        // Business names vary in length, so the pill sizes to the text instead of clipping it.
+        const pillWidth = o.width || 140;
         ctx.shadowColor = o.color;
         ctx.shadowBlur = 15;
-        ctx.fillStyle = 'rgba(15, 12, 33, 0.92)';
+        ctx.fillStyle = 'rgba(15, 12, 33, 0.9)';
         ctx.strokeStyle = o.color;
         ctx.lineWidth = 2;
         ctx.beginPath();
-        ctx.roundRect(o.x - 65, o.y - 20, 130, 40, 12);
+        ctx.roundRect(o.x - pillWidth / 2, o.y - 22, pillWidth, 44, 14);
         ctx.fill();
         ctx.stroke();
 
         ctx.fillStyle = '#ffffff';
-        ctx.font = 'bold 12px Outfit';
-        ctx.textAlign = 'center';
-        ctx.fillText(o.text, o.x, o.y + 4);
+        ctx.fillText(o.text, o.x, o.y + 5);
         ctx.restore();
 
-        // COLLISION CHECK
-        if (Math.abs(player.x - o.x) < 65 && Math.abs(player.y - o.y) < 25) {
+        // COLLISION CHECK: hitting a manual task slows the business down instead of ending
+        // the run -- doing things by hand is what costs you speed, not what kills you.
+        // Hitbox matches the drawn pill (not a tiny fraction of it) so a visual hit always
+        // actually registers -- every obstacle is one of the site's demo bottlenecks, and
+        // the whole point is that touching it should always cost you speed.
+        if (!o.hit && Math.abs(player.x - o.x) < pillWidth / 2 + player.radius * 0.5
+            && Math.abs(player.y - o.y) < 22 + player.radius * 0.5) {
+          o.hit = true;
+          missedAutomations.push(o.category);
           createSparkles(player.x, player.y, '#ef4444');
-          gameOver();
+          playObstacleHitSound();
+          triggerSlowdown();
         }
 
         if (o.x < -100) obstacles.splice(i, 1);
       }
 
-      // DRAW PARTICLES
+      // UPDATE & DRAW PARTICLES
       for (let i = particles.length - 1; i >= 0; i--) {
         const p = particles[i];
         p.x += p.vx;
@@ -736,61 +993,92 @@
         ctx.restore();
       }
 
-      // DRAW SCORE POPUPS
-      for (let i = popups.length - 1; i >= 0; i--) {
-        const pop = popups[i];
-        pop.y -= 1.2;
-        pop.life -= 0.02;
+      // DRAW AUTOMATION SLIDER PLATFORM (glowing hover-board that carries Sean along)
+      ctx.save();
+      const platW = player.radius * 2.4;
+      const platY = player.y + player.radius + 10;
+      ctx.translate(player.x, platY);
 
-        if (pop.life <= 0) {
-          popups.splice(i, 1);
-          continue;
-        }
+      const platGrad = ctx.createLinearGradient(-platW / 2, 0, platW / 2, 0);
+      platGrad.addColorStop(0, '#8845e8');
+      platGrad.addColorStop(0.5, '#d53cb9');
+      platGrad.addColorStop(1, '#19c7d6');
 
-        ctx.save();
-        ctx.globalAlpha = pop.life;
-        ctx.fillStyle = pop.color;
-        ctx.font = 'extrabold 14px Outfit';
-        ctx.textAlign = 'center';
-        ctx.fillText(pop.text, pop.x, pop.y);
-        ctx.restore();
-      }
+      ctx.shadowColor = '#a855f7';
+      ctx.shadowBlur = 20;
+      ctx.fillStyle = platGrad;
+      ctx.beginPath();
+      ctx.roundRect(-platW / 2, -5, platW, 10, 5);
+      ctx.fill();
 
-      // DRAW PLAYER (OFFICIAL HEADSHOT / CARTOON AVATAR)
+      // Flowing dashes to sell the sense of being carried along by automation
+      ctx.save();
+      ctx.beginPath();
+      ctx.roundRect(-platW / 2, -5, platW, 10, 5);
+      ctx.clip();
+      ctx.strokeStyle = 'rgba(255,255,255,0.65)';
+      ctx.lineWidth = 3;
+      const dashOffset = -(frameCount * 3) % 24;
+      ctx.setLineDash([10, 14]);
+      ctx.lineDashOffset = dashOffset;
+      ctx.beginPath();
+      ctx.moveTo(-platW / 2 - 20, 0);
+      ctx.lineTo(platW / 2 + 20, 0);
+      ctx.stroke();
+      ctx.restore();
+
+      ctx.restore();
+
+      // DRAW PLAYER (FULL-BODY CHARACTER SPRITE, SQUASH & STRETCHED)
+      // Real character art (not a circle-cropped headshot) -- sized taller than the physics
+      // radius so the whole figure reads clearly, while collision math stays keyed to
+      // player.radius so none of the tuned gameplay spacing changes.
+      const spriteH = player.radius * 3.1;
+      const spriteW = spriteH * (SPRITE_ASPECT);
+
       ctx.save();
       ctx.translate(player.x, player.y);
       ctx.rotate(player.rotation);
+      ctx.scale(player.scaleX, player.scaleY);
 
-      // Outer Glow Orb
+      // Real cutout art (transparent PNG), drawn directly -- no frame/clip needed,
+      // it just reads as the character themselves moving through the scene.
       ctx.shadowColor = '#a855f7';
-      ctx.shadowBlur = 35;
+      ctx.shadowBlur = 22;
 
-      // Circular Clip for Avatar Face
-      ctx.beginPath();
-      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-      ctx.clip();
-
-      if (avatarImg.complete && avatarImg.naturalWidth > 0) {
-        ctx.drawImage(avatarImg, -player.radius, -player.radius, player.radius * 2, player.radius * 2);
+      if (avatarImg.complete) {
+        ctx.drawImage(avatarImg, -spriteW / 2, -spriteH / 2, spriteW, spriteH);
       } else {
         ctx.fillStyle = '#9333ea';
+        ctx.beginPath();
+        ctx.roundRect(-spriteW / 2, -spriteH / 2, spriteW, spriteH, 16);
         ctx.fill();
       }
 
-      // Glowing Outer Ring
-      ctx.strokeStyle = '#c084fc';
-      ctx.lineWidth = 4;
-      ctx.beginPath();
-      ctx.arc(0, 0, player.radius, 0, Math.PI * 2);
-      ctx.stroke();
-
       ctx.restore();
+
+      // MOTION TRAIL: faint after-images while rising fast, selling the jump
+      if (player.vy < -4) {
+        ctx.save();
+        ctx.globalAlpha = 0.18;
+        ctx.shadowBlur = 0;
+        for (let i = 1; i <= 2; i++) {
+          ctx.save();
+          ctx.translate(player.x - i * 10, player.y + i * 6);
+          ctx.scale(player.scaleX * (1 - i * 0.08), player.scaleY * (1 - i * 0.08));
+          if (avatarImg.complete) {
+            ctx.drawImage(avatarImg, -spriteW / 2, -spriteH / 2, spriteW, spriteH);
+          }
+          ctx.restore();
+        }
+        ctx.restore();
+      }
 
       // UPDATE HUD READOUTS
       document.getElementById('hudHours').innerText = `${scoreHours.toLocaleString()} hrs`;
       document.getElementById('hudDollars').innerText = `$${scoreDollars.toLocaleString()}`;
 
-      animId = requestAnimationFrame(gameLoop);
+      requestAnimationFrame(gameLoop);
     }
   </script>
 </body>
