@@ -420,11 +420,9 @@
       { text: () => `❓ Unanswered FAQ at ${businessName}`, color: '#8b5cf6', category: 'FAQ & Booking' }
     ];
 
-    // Tracks what actually happened during the run so the end report can call out
-    // which automations were captured, and which kinds of automation are relevant to this
-    // business (hit or dodged -- either way, it means they ran into that bottleneck).
+    // Tracks which kinds of automation this business ran into during the run (hit or
+    // dodged -- either way, it means that bottleneck applies to them) for the end report.
     let encounteredAutomations = [];
-    let capturedAutomations = [];
 
     function updateSlowdownBanner() {
       const banner = document.getElementById('slowdownBanner');
@@ -541,7 +539,6 @@
       scoreDollars = 0;
       hoopsPassed = 0;
       encounteredAutomations = [];
-      capturedAutomations = [];
       timeLeft = RUN_SECONDS;
       document.getElementById('hudTimer').innerText = '0:' + String(RUN_SECONDS).padStart(2, '0');
       lastInputFrame = 0;
@@ -680,19 +677,11 @@
       // isn't just a total but a story of the run.
       const recap = document.getElementById('runRecap');
       recap.innerHTML = '';
-      if (capturedAutomations.length) {
-        const box = document.createElement('div');
-        box.className = 'p-4 rounded-2xl bg-emerald-500/10 border border-emerald-500/30';
-        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-emerald-300 mb-2">✅ Automations You Captured</div>' +
-          '<ul class="text-xs text-slate-200 space-y-1">' +
-          capturedAutomations.map(a => `<li>• ${a}</li>`).join('') + '</ul>';
-        recap.appendChild(box);
-      }
       const encounteredUnique = [...new Set(encounteredAutomations)];
       if (encounteredUnique.length) {
         const box = document.createElement('div');
         box.className = 'p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30';
-        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-cyan-300 mb-2">🎯 Automations Relevant to Your Business</div>' +
+        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-cyan-300 mb-2">🎯 Automations Your Business Can Benefit From</div>' +
           '<ul class="text-xs text-slate-200 space-y-1">' +
           encounteredUnique.map(m => `<li>• ${m}</li>`).join('') + '</ul>';
         recap.appendChild(box);
@@ -926,7 +915,6 @@
           scoreHours += h.value.hours;
           scoreDollars += h.value.dollars;
           hoopsPassed++;
-          capturedAutomations.push(h.value.star ? `⭐ Big Win (+${h.value.hours} hrs)` : `+${h.value.hours} hrs`);
           player.popTimer = 14; // little celebratory pop on the sprite
           playHoopSound();
           createSparkles(h.x, h.y, h.value.star ? '#facc15' : '#34d399');
