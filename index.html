@@ -4,6 +4,7 @@
 <meta charset="UTF-8">
 <meta name="viewport" content="width=device-width, initial-scale=1.0">
 <title>LoopLogiQ: Business Automation Runner</title>
+<link rel="icon" type="image/png" href="/favicon.png">
 <script src="https://cdn.tailwindcss.com"></script>
 <link href="https://fonts.googleapis.com/css2?family=Outfit:wght@400;600;700;800;900&family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
 <script src="https://cdn.jsdelivr.net/npm/canvas-confetti@1.6.0/dist/confetti.browser.min.js"></script>
@@ -178,6 +179,17 @@
   <div id="endModal" class="hidden absolute inset-0 z-50 flex items-center justify-center p-4 bg-black/80 backdrop-blur-md">
     <div class="glass-panel pulse-glow rounded-3xl p-5 sm:p-8 max-w-xl w-full text-center relative overflow-x-hidden overflow-y-auto max-h-[90vh]">
 
+      <!-- HOME / CLOSE: quick way back to the main site after a run, no need to hunt for it
+           further down the page. Same destination (same-tab navigation, not a new tab). -->
+      <a href="https://www.looplogiq.com" aria-label="Back to LoopLogiQ home"
+         class="absolute top-3 left-3 sm:top-4 sm:left-4 z-10 w-9 h-9 rounded-full bg-white/5 border border-purple-400/30 text-slate-300 hover:text-white hover:border-purple-300 hover:bg-white/10 transition flex items-center justify-center text-base">
+        🏠
+      </a>
+      <a href="https://www.looplogiq.com" aria-label="Close and return to LoopLogiQ home"
+         class="absolute top-3 right-3 sm:top-4 sm:right-4 z-10 w-9 h-9 rounded-full bg-white/5 border border-purple-400/30 text-slate-300 hover:text-white hover:border-purple-300 hover:bg-white/10 transition flex items-center justify-center text-lg font-bold">
+        ✕
+      </a>
+
       <!-- LOGO -->
       <img src="public/logo.png" class="h-12 sm:h-14 w-auto object-contain mx-auto mb-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
 
@@ -270,7 +282,7 @@
                 class="px-6 py-3 rounded-full bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-sm shadow-xl shadow-purple-950/60 transition transform hover:scale-[1.02] active:scale-95 tracking-wide">
           🔄 Play Again
         </button>
-        <a href="https://www.looplogiq.com" target="_blank" rel="noopener"
+        <a href="https://www.looplogiq.com"
            class="px-6 py-3 rounded-full border-2 border-purple-400/50 text-purple-200 font-extrabold text-sm hover:bg-purple-500/10 hover:border-purple-300 hover:text-white transition tracking-wide">
           🌐 Visit LoopLogiQ.com
         </a>
