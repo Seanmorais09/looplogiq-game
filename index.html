@@ -268,9 +268,9 @@
       x: 140,
       y: window.innerHeight / 2,
       radius: 38,
-      vy: 0,
-      gravity: 0.48,
-      jumpPower: -10.5,
+      vy: -4,
+      gravity: 0.35,
+      jumpPower: -9.5,
       rotation: 0
     };
 
@@ -351,9 +351,21 @@
       obstacles = [];
       particles = [];
       popups = [];
-      player.y = canvas.height / 2;
-      player.vy = 0;
+      player.y = canvas.height / 2 - 40;
+      player.vy = -4;
       frameCount = 0;
+
+      // Guaranteed First Hoop right at eye level!
+      hoops.push({
+        x: canvas.width + 100,
+        y: canvas.height / 2,
+        radius: 70,
+        name: '✨ SMS Recovery Hoop',
+        color: '#34d399',
+        hrs: 150,
+        dol: 12500,
+        passed: false
+      });
 
       resizeCanvas();
       if (animId) cancelAnimationFrame(animId);
@@ -362,11 +374,11 @@
 
     function spawnHoop() {
       const type = hoopTypes[Math.floor(Math.random() * hoopTypes.length)];
-      const topY = Math.random() * (canvas.height - 360) + 120;
+      const topY = Math.random() * (canvas.height - 360) + 140;
       hoops.push({
         x: canvas.width + 70,
         y: topY,
-        radius: 65,
+        radius: 68,
         name: type.name,
         color: type.color,
         hrs: type.hrs,
@@ -377,7 +389,7 @@
 
     function spawnObstacle() {
       const type = obstacleTypes[Math.floor(Math.random() * obstacleTypes.length)];
-      const obsY = Math.random() * (canvas.height - 280) + 120;
+      const obsY = Math.random() * (canvas.height - 280) + 140;
       obstacles.push({
         x: canvas.width + 80,
         y: obsY,
@@ -449,18 +461,25 @@
       player.y += player.vy;
       player.rotation = Math.min(Math.PI / 6, Math.max(-Math.PI / 6, player.vy * 0.04));
 
-      if (player.y + player.radius > canvas.height - 15) {
-        player.y = canvas.height - 15 - player.radius;
-        gameOver();
+      // Initial 4-second Grace Period Safety Bounce!
+      if (player.y + player.radius > canvas.height - 20) {
+        if (frameCount < 240) {
+          player.y = canvas.height - 20 - player.radius;
+          player.vy = -8.5; // Safety Bounce!
+          createSparkles(player.x, player.y, '#c084fc');
+        } else {
+          player.y = canvas.height - 20 - player.radius;
+          gameOver();
+        }
       }
       if (player.y - player.radius < 0) {
         player.y = player.radius;
         player.vy = 0;
       }
 
-      // SPAWN OBJECTS
-      if (frameCount % 115 === 0) spawnHoop();
-      if (frameCount % 170 === 90) spawnObstacle();
+      // SPAWN OBJECTS (Gentle pacing at start)
+      if (frameCount > 60 && frameCount % 120 === 0) spawnHoop();
+      if (frameCount > 300 && frameCount % 180 === 0) spawnObstacle();
 
       // DRAW & UPDATE HOOPS
       for (let i = hoops.length - 1; i >= 0; i--) {
