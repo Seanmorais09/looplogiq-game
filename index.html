@@ -177,13 +177,14 @@
       <!-- LOGO -->
       <img src="public/logo.png" class="h-12 sm:h-14 w-auto object-contain mx-auto mb-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
 
-      <!-- HEADER -->
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-3">
+      <!-- HEADER + FINISH LINE FLAG: grouped tightly as one unit -- the business name/logo
+           reads as a direct extension of "Automation Victorious" rather than a separate block. -->
+      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-2">
         <span>🎉 AUTOMATION VICTORIOUS!</span>
       </div>
 
       <!-- FINISH LINE FLAG: captures the player's business name (and logo, if a site was given) -->
-      <div id="endFlagBanner" class="inline-flex items-center gap-2 mx-auto mb-3 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-indigo-600/30 border border-purple-400/40">
+      <div id="endFlagBanner" class="inline-flex items-center gap-2 mx-auto mb-4 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-indigo-600/30 border border-purple-400/40">
         <!-- Finish-line flag: shown only when there's no logo to show instead (a triangular
              "flagpole" flag reads more like a level-clear flag than a racing checkered flag) -->
         <span id="endFlagEmoji" class="text-2xl">🚩</span>
@@ -210,7 +211,7 @@
         </div>
         <div class="p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
           <div class="text-[10px] uppercase font-bold text-slate-400">ROI Impact</div>
-          <div class="text-xl sm:text-2xl font-extrabold text-fuchsia-400 mt-1">412% ROI</div>
+          <div id="endROI" class="text-xl sm:text-2xl font-extrabold text-fuchsia-400 mt-1">0% ROI</div>
         </div>
       </div>
 
@@ -247,7 +248,7 @@
               <option value="Invoicing & Documents">Primary Bottleneck: Invoicing & Documents</option>
             </select>
           </div>
-          <div class="cf-turnstile" data-sitekey="0x4AAAAAADQGnq0-h0Z6hdIJ" data-theme="dark"></div>
+          <div class="cf-turnstile w-full" data-sitekey="0x4AAAAAADQGnq0-h0Z6hdIJ" data-theme="dark" data-size="flexible"></div>
           <p id="leadFormStatus" class="text-xs text-center hidden" role="status" aria-live="polite"></p>
           <button type="submit" id="leadSubmitBtn" class="w-full py-3.5 rounded-xl bg-gradient-to-r from-emerald-500 to-teal-600 hover:from-emerald-400 hover:to-teal-500 text-white font-extrabold text-sm shadow-lg shadow-emerald-950/60 transition transform hover:scale-[1.01] active:scale-95">
             📞 Schedule My Free 20-Min Audit
@@ -658,6 +659,11 @@
       }
       document.getElementById('endHours').innerText = `${scoreHours.toLocaleString()} hrs`;
       document.getElementById('endDollars').innerText = `$${scoreDollars.toLocaleString()}`;
+      // ROI against a modest assumed monthly automation cost -- was a hardcoded "412% ROI"
+      // regardless of actual result, which made no sense next to the real hours/dollars figures.
+      const ASSUMED_MONTHLY_COST = 300;
+      const roiPct = Math.round((scoreDollars / ASSUMED_MONTHLY_COST) * 100);
+      document.getElementById('endROI').innerText = `${roiPct.toLocaleString()}% ROI`;
 
       // RUN RECAP: what actually got captured vs. what slowed them down, so the report
       // isn't just a total but a story of the run.
