@@ -125,7 +125,7 @@
       </p>
 
       <!-- METRICS GRID -->
-      <div class="grid grid-cols-3 gap-3 mb-6">
+      <div class="grid grid-cols-3 gap-3 mb-5">
         <div class="p-3.5 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
           <div class="text-[9px] uppercase font-bold text-slate-400">Hours Saved</div>
           <div id="endHours" class="text-lg sm:text-2xl font-extrabold text-emerald-400 mt-0.5">1,480 hrs</div>
@@ -137,6 +137,17 @@
         <div class="p-3.5 rounded-2xl bg-white/5 border border-purple-500/30 text-center">
           <div class="text-[9px] uppercase font-bold text-slate-400">ROI Impact</div>
           <div class="text-lg sm:text-2xl font-extrabold text-fuchsia-400 mt-0.5">412% ROI</div>
+        </div>
+      </div>
+
+      <!-- DYNAMIC AUTOMATED HOOPS REPORT -->
+      <div class="mb-5 p-4 rounded-2xl bg-white/5 border border-purple-500/30 text-left">
+        <div class="text-[10px] font-bold text-purple-300 uppercase tracking-wider mb-2.5 flex items-center justify-between">
+          <span>⚙️ Deployed AI Workflows (<span id="endBizName">Acme Corp</span>)</span>
+          <span id="endHoopCount" class="text-emerald-400 font-extrabold">0 Hoops Leapt</span>
+        </div>
+        <div id="endHoopsList" class="flex flex-wrap gap-2">
+          <!-- Dynamically inserted hoop badges -->
         </div>
       </div>
 
@@ -249,6 +260,23 @@
       } catch(e){}
     }
 
+    function playCoinSound() {
+      if (!audioCtx) return;
+      try {
+        const osc = audioCtx.createOscillator();
+        const gain = audioCtx.createGain();
+        osc.type = 'sine';
+        osc.frequency.setValueAtTime(987.77, audioCtx.currentTime); // B5
+        osc.frequency.setValueAtTime(1318.51, audioCtx.currentTime + 0.08); // E6
+        gain.gain.setValueAtTime(0.2, audioCtx.currentTime);
+        gain.gain.exponentialRampToValueAtTime(0.001, audioCtx.currentTime + 0.2);
+        osc.connect(gain);
+        gain.connect(audioCtx.destination);
+        osc.start();
+        osc.stop(audioCtx.currentTime + 0.2);
+      } catch(e){}
+    }
+
     // RESIZE CANVAS CLEANLY
     function resizeCanvas() {
       canvas.width = window.innerWidth;
@@ -275,15 +303,23 @@
     };
 
     let hoops = [];
+    let coins = [];
     let obstacles = [];
     let particles = [];
     let popups = [];
+    let collectedHoops = [];
 
     const hoopTypes = [
       { name: '✨ SMS Recovery Hoop', color: '#34d399', hrs: 150, dol: 12500 },
       { name: '⚡ 24/7 Booking Hoop', color: '#c084fc', hrs: 180, dol: 15000 },
       { name: '💳 Auto Billing Hoop', color: '#38bdf8', hrs: 140, dol: 10000 },
       { name: '🚀 CRM Sync Hoop', color: '#f472b6', hrs: 200, dol: 18000 }
+    ];
+
+    const coinTypes = [
+      { text: '💵 +$2,500', val: 2500, color: '#34d399' },
+      { text: '💰 +$5,000', val: 5000, color: '#fbbf24' },
+      { text: '💎 +$10,000', val: 10000, color: '#c084fc' }
     ];
 
     const obstacleTypes = [
@@ -348,14 +384,16 @@
       scoreHours = 0;
       scoreDollars = 0;
       hoops = [];
+      coins = [];
       obstacles = [];
       particles = [];
       popups = [];
+      collectedHoops = [];
       player.y = canvas.height / 2 - 40;
       player.vy = -4;
       frameCount = 0;
 
-      // Guaranteed First Hoop right at eye level!
+      // Guaranteed First Hoop & Money item right at start!
       hoops.push({
         x: canvas.width + 100,
         y: canvas.height / 2,
@@ -365,6 +403,16 @@
         hrs: 150,
         dol: 12500,
         passed: false
+      });
+
+      coins.push({
+        x: canvas.width + 240,
+        y: canvas.height / 2 - 30,
+        text: '💰 +$5,000',
+        val: 5000,
+        color: '#fbbf24',
+        radius: 24,
+        collected: false
       });
 
       resizeCanvas();
@@ -384,6 +432,20 @@
         hrs: type.hrs,
         dol: type.dol,
         passed: false
+      });
+    }
+
+    function spawnCoin() {
+      const type = coinTypes[Math.floor(Math.random() * coinTypes.length)];
+      const coinY = Math.random() * (canvas.height - 260) + 130;
+      coins.push({
+        x: canvas.width + 60,
+        y: coinY,
+        text: type.text,
+        val: type.val,
+        color: type.color,
+        radius: 22,
+        collected: false
       });
     }
 
@@ -418,8 +480,51 @@
       isPlaying = false;
       document.getElementById('hud').classList.add('hidden');
       document.getElementById('endTitle').innerText = `Awesome Job, ${businessName}!`;
+      document.getElementById('endBizName').innerText = businessName;
       document.getElementById('endHours').innerText = `${scoreHours.toLocaleString()} hrs`;
       document.getElementById('endDollars').innerText = `$${scoreDollars.toLocaleString()}`;
+
+      // Render Dynamic Collected Hoops Badges
+      const listEl = document.getElementById('endHoopsList');
+      const countEl = document.getElementById('endHoopCount');
+      listEl.innerHTML = '';
+
+      if (collectedHoops.length === 0) {
+        // Fallback default hoops list if user died right away
+        collectedHoops = [
+          { name: '✨ SMS Recovery', hrs: 150, color: '#34d399' },
+          { name: '⚡ 24/7 Booking', hrs: 180, color: '#c084fc' },
+          { name: '🚀 CRM Sync', hrs: 200, color: '#f472b6' }
+        ];
+        scoreHours = 530;
+        scoreDollars = 45500;
+        document.getElementById('endHours').innerText = `530 hrs`;
+        document.getElementById('endDollars').innerText = `$45,500`;
+      }
+
+      countEl.innerText = `${collectedHoops.length} Systems Deployed`;
+
+      // Aggregate counts by hoop name
+      const hoopCounts = {};
+      collectedHoops.forEach(h => {
+        if (!hoopCounts[h.name]) {
+          hoopCounts[h.name] = { count: 0, hrs: 0, color: h.color };
+        }
+        hoopCounts[h.name].count++;
+        hoopCounts[h.name].hrs += h.hrs;
+      });
+
+      Object.keys(hoopCounts).forEach(key => {
+        const item = hoopCounts[key];
+        const badge = document.createElement('div');
+        badge.className = 'px-3 py-1.5 rounded-xl text-xs font-bold flex items-center gap-1.5 border shadow-lg';
+        badge.style.backgroundColor = `${item.color}22`;
+        badge.style.borderColor = `${item.color}88`;
+        badge.style.color = '#ffffff';
+        badge.innerHTML = `<span>${key}</span> <span style="color:${item.color}; font-weight:800;">(${item.count > 1 ? item.count + 'x • ' : ''}+${item.hrs} Hrs)</span>`;
+        listEl.appendChild(badge);
+      });
+
       document.getElementById('endModal').classList.remove('hidden');
 
       confetti({
@@ -479,7 +584,52 @@
 
       // SPAWN OBJECTS (Gentle pacing at start)
       if (frameCount > 60 && frameCount % 120 === 0) spawnHoop();
+      if (frameCount % 90 === 45) spawnCoin();
       if (frameCount > 300 && frameCount % 180 === 0) spawnObstacle();
+
+      // DRAW & UPDATE FLOATING MONEY COINS
+      for (let i = coins.length - 1; i >= 0; i--) {
+        const c = coins[i];
+        c.x -= 4.0;
+
+        ctx.save();
+        ctx.shadowColor = c.color;
+        ctx.shadowBlur = 18;
+        ctx.fillStyle = 'rgba(15, 12, 33, 0.90)';
+        ctx.strokeStyle = c.color;
+        ctx.lineWidth = 2.5;
+        ctx.beginPath();
+        ctx.arc(c.x, c.y, c.radius, 0, Math.PI * 2);
+        ctx.fill();
+        ctx.stroke();
+
+        ctx.fillStyle = '#ffffff';
+        ctx.font = 'bold 11px Outfit';
+        ctx.textAlign = 'center';
+        ctx.fillText(c.text, c.x, c.y + 4);
+        ctx.restore();
+
+        // CHECK COIN PICKUP
+        const dist = Math.hypot(player.x - c.x, player.y - c.y);
+        if (!c.collected && dist < player.radius + c.radius) {
+          c.collected = true;
+          scoreDollars += c.val;
+          playCoinSound();
+          createSparkles(c.x, c.y, c.color);
+
+          popups.push({
+            x: c.x,
+            y: c.y - 20,
+            text: `${c.text} Saved!`,
+            color: c.color,
+            life: 1.0
+          });
+          coins.splice(i, 1);
+          continue;
+        }
+
+        if (c.x < -60) coins.splice(i, 1);
+      }
 
       // DRAW & UPDATE HOOPS
       for (let i = hoops.length - 1; i >= 0; i--) {
@@ -518,6 +668,7 @@
           h.passed = true;
           scoreHours += h.hrs;
           scoreDollars += h.dol;
+          collectedHoops.push({ name: h.name, hrs: h.hrs, color: h.color });
           playHoopSound();
           createSparkles(h.x, h.y, h.color);
 
