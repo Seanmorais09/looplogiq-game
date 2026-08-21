@@ -129,43 +129,47 @@
   <div id="startModal" class="absolute inset-0 z-40 flex items-center justify-center p-4">
     <div class="glass-panel pulse-glow rounded-3xl p-8 max-w-lg w-full text-center relative overflow-hidden">
       <!-- OWNER AVATAR & LOGO -->
-      <div class="flex items-center justify-center gap-4 mb-6">
+      <div class="flex items-center justify-center gap-4 mb-5">
         <img src="public/avatar.jpg" class="avatar-alive h-20 w-20 rounded-2xl object-cover border-2 border-purple-400/60 shadow-[0_0_30px_rgba(168,85,247,0.8)]" alt="Sean, Founder of LoopLogiQ">
         <img src="public/logo.png" class="h-12 w-auto object-contain drop-shadow-[0_0_20px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
       </div>
 
       <h1 class="text-3xl sm:text-4xl font-black tracking-tight text-white mb-2">
-        LoopLogiQ: Hoop Hopper
+        Hoop Hopper
       </h1>
-      <p class="text-slate-300 text-sm font-light mb-6 leading-relaxed">
-        Play as <strong class="text-purple-300 font-semibold">Sean, Founder of LoopLogiQ</strong>! Leap through glowing <span class="text-emerald-400 font-semibold">LoopLogiQ Infinity Hoops</span> to automate manual tasks and save your business thousands of hours & dollars!
+      <p class="text-slate-300 text-sm mb-1 leading-snug">
+        You're <strong class="text-purple-300 font-semibold">Sean, founder of LoopLogiQ</strong>.
+      </p>
+      <p class="text-slate-400 text-sm mb-5 leading-snug">
+        Jump through hoops to automate the busywork. Miss one, and manual tasks slow you down.
       </p>
 
       <!-- FORM INPUT -->
-      <form id="startForm" onsubmit="startGame(event)" class="space-y-4 text-left">
+      <form id="startForm" onsubmit="startGame(event)" class="space-y-3 text-left">
         <div>
-          <label for="businessInput" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-            Enter Your Business Name
+          <label for="businessInput" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            Your Business Name
           </label>
           <input id="businessInput" type="text" required placeholder="e.g. Acme Corp, Bellevue Dental"
-                 class="w-full px-5 py-3.5 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
+                 class="w-full px-5 py-3 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
         </div>
         <div>
-          <label for="businessUrlInput" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-2">
-            Business Website <span class="text-slate-500 normal-case font-medium">(optional -- we'll pull your logo)</span>
+          <label for="businessUrlInput" class="block text-xs font-bold text-slate-300 uppercase tracking-wider mb-1.5">
+            Business Website <span class="text-slate-500 normal-case font-medium">(optional)</span>
           </label>
           <input id="businessUrlInput" type="text" placeholder="e.g. yourbusiness.com"
-                 class="w-full px-5 py-3.5 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
+                 class="w-full px-5 py-3 rounded-2xl bg-white/10 border border-purple-400/50 text-white placeholder-slate-400 font-medium focus:outline-none focus:border-purple-400 focus:ring-2 focus:ring-purple-500/50 transition">
+          <p class="text-[11px] text-slate-500 mt-1">We'll show your logo on the results screen.</p>
         </div>
         <button type="submit" class="w-full py-4 rounded-2xl bg-gradient-to-r from-purple-600 via-fuchsia-600 to-indigo-600 hover:from-purple-500 hover:to-indigo-500 text-white font-extrabold text-lg shadow-xl shadow-purple-950/60 transition transform hover:scale-[1.02] active:scale-95 tracking-wide">
           🚀 START AUTOMATING
         </button>
       </form>
 
-      <div class="mt-4 text-xs text-slate-400 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
-        <span>⌨️ <strong class="text-slate-200">Space / Up Arrow</strong> to Jump</span>
-        <span>⚡ <strong class="text-slate-200">Right Arrow</strong> to Accelerate</span>
-        <span>📱 <strong class="text-slate-200">Tap Screen</strong> to Jump, hold ⚡ to Accelerate</span>
+      <div class="mt-5 text-xs text-slate-400 flex flex-wrap items-center justify-center gap-x-4 gap-y-1">
+        <span>⌨️ <strong class="text-slate-200">Space</strong> to Jump</span>
+        <span>⚡ <strong class="text-slate-200">→</strong> to Accelerate</span>
+        <span>📱 <strong class="text-slate-200">Tap</strong> to Jump &amp; hold ⚡</span>
       </div>
     </div>
   </div>
@@ -178,13 +182,15 @@
       <img src="public/logo.png" class="h-12 sm:h-14 w-auto object-contain mx-auto mb-3 drop-shadow-[0_0_15px_rgba(168,85,247,0.9)]" alt="LoopLogiQ Logo">
 
       <!-- HEADER + FINISH LINE FLAG: grouped tightly as one unit -- the business name/logo
-           reads as a direct extension of "Automation Victorious" rather than a separate block. -->
-      <div class="inline-flex items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-2">
+           reads as a direct extension of "Automation Victorious" rather than a separate block.
+           `flex` (not inline-flex) + w-fit mx-auto so each is block-level and always forces
+           its own line, instead of potentially sitting side-by-side on wider screens. -->
+      <div class="flex w-fit mx-auto items-center gap-2 px-4 py-1.5 rounded-full bg-emerald-500/10 border border-emerald-500/30 text-emerald-300 text-xs font-bold tracking-widest uppercase mb-2">
         <span>🎉 AUTOMATION VICTORIOUS!</span>
       </div>
 
       <!-- FINISH LINE FLAG: captures the player's business name (and logo, if a site was given) -->
-      <div id="endFlagBanner" class="inline-flex items-center gap-2 mx-auto mb-4 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-indigo-600/30 border border-purple-400/40">
+      <div id="endFlagBanner" class="flex w-fit items-center gap-2 mx-auto mb-4 px-5 py-2 rounded-xl bg-gradient-to-r from-purple-600/30 via-fuchsia-600/30 to-indigo-600/30 border border-purple-400/40">
         <!-- Finish-line flag: shown only when there's no logo to show instead (a triangular
              "flagpole" flag reads more like a level-clear flag than a racing checkered flag) -->
         <span id="endFlagEmoji" class="text-2xl">🚩</span>
@@ -214,6 +220,9 @@
           <div id="endROI" class="text-xl sm:text-2xl font-extrabold text-fuchsia-400 mt-1">0% ROI</div>
         </div>
       </div>
+      <p class="text-[10px] text-slate-500 italic -mt-4 mb-6">
+        * Just for fun -- these numbers are part of the game, not a real estimate for your business.
+      </p>
 
       <!-- RUN RECAP: what got automated vs. what slowed them down along the way -->
       <div id="runRecap" class="grid sm:grid-cols-2 gap-3 mb-6 text-left"></div>
@@ -412,8 +421,9 @@
     ];
 
     // Tracks what actually happened during the run so the end report can call out
-    // specifically which automations were captured vs. which pain points slowed them down.
-    let missedAutomations = [];
+    // which automations were captured, and which kinds of automation are relevant to this
+    // business (hit or dodged -- either way, it means they ran into that bottleneck).
+    let encounteredAutomations = [];
     let capturedAutomations = [];
 
     function updateSlowdownBanner() {
@@ -530,7 +540,7 @@
       scoreHours = 0;
       scoreDollars = 0;
       hoopsPassed = 0;
-      missedAutomations = [];
+      encounteredAutomations = [];
       capturedAutomations = [];
       timeLeft = RUN_SECONDS;
       document.getElementById('hudTimer').innerText = '0:' + String(RUN_SECONDS).padStart(2, '0');
@@ -678,13 +688,13 @@
           capturedAutomations.map(a => `<li>• ${a}</li>`).join('') + '</ul>';
         recap.appendChild(box);
       }
-      const missedUnique = [...new Set(missedAutomations)];
-      if (missedUnique.length) {
+      const encounteredUnique = [...new Set(encounteredAutomations)];
+      if (encounteredUnique.length) {
         const box = document.createElement('div');
-        box.className = 'p-4 rounded-2xl bg-red-500/10 border border-red-500/30';
-        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-red-300 mb-2">⚠️ What Slowed You Down</div>' +
+        box.className = 'p-4 rounded-2xl bg-cyan-500/10 border border-cyan-500/30';
+        box.innerHTML = '<div class="text-[10px] uppercase font-bold text-cyan-300 mb-2">🎯 Automations Relevant to Your Business</div>' +
           '<ul class="text-xs text-slate-200 space-y-1">' +
-          missedUnique.map(m => `<li>• ${m}</li>`).join('') + '</ul>';
+          encounteredUnique.map(m => `<li>• ${m}</li>`).join('') + '</ul>';
         recap.appendChild(box);
       }
 
@@ -970,10 +980,18 @@
         if (!o.hit && Math.abs(player.x - o.x) < pillWidth / 2 + player.radius * 0.5
             && Math.abs(player.y - o.y) < 22 + player.radius * 0.5) {
           o.hit = true;
-          missedAutomations.push(o.category);
+          encounteredAutomations.push(o.category);
           createSparkles(player.x, player.y, '#ef4444');
           playObstacleHitSound();
           triggerSlowdown();
+        }
+
+        // Dodged obstacles still count as "encountered" for the recap -- the point of that
+        // section is showing which kinds of automation are relevant to the player's business,
+        // not just the ones that happened to catch them.
+        if (!o.hit && !o.dodgeLogged && o.x < -o.width / 2) {
+          o.dodgeLogged = true;
+          encounteredAutomations.push(o.category);
         }
 
         if (o.x < -100) obstacles.splice(i, 1);
